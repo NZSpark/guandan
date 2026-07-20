@@ -63,9 +63,13 @@ pnpm run dev
 
 ## 截图
 
-![轮次配对界面](./screenshot-round.png)
+![系统界面](./screenshots/title.png)
 
-![计分录入界面](./screenshot-score-detail.png)
+![积分界面](./screenshots/score.png)
+
+![设置界面](./screenshots/settings.png)
+
+![选手界面](./screenshots/players.png)
 
 ---
 
