@@ -1,10 +1,9 @@
-![AotearoaGuandan logo.](./graphics/logo.svg)
+
 
 # Aotearoa掼蛋俱乐部排位系统
 
-**Aotearoa掼蛋俱乐部排位系统** 是由 [Aotearoa掼蛋俱乐部](https://ai3d.co.nz/guandan/) 开发维护的掼蛋比赛管理 Web 应用。系统支持瑞士移位制、小组单循环赛和淘汰赛三种赛制，可自动完成选手配对、级差计分、实时排名与数据导出等全部比赛管理流程。
+**Aotearoa掼蛋俱乐部排位系统** 是由 [Aotearoa掼蛋俱乐部]() 开发维护的掼蛋比赛管理 Web 应用。系统支持瑞士移位制、小组单循环赛和淘汰赛三种赛制，可自动完成选手配对、级差计分、实时排名与数据导出等全部比赛管理流程。
 
-[在线应用](https://ai3d.co.nz/guandan/) |
 [用户手册](./docs/usermanual.md) |
 [运维手册](./docs/operation.md) |
 [常见问题](./docs/faq.md)
@@ -41,10 +40,6 @@ Aotearoa掼蛋俱乐部致力于在新西兰推广和普及掼蛋这项中国传
 ---
 
 ## 快速开始
-
-### 在线使用
-
-访问 **[ai3d.co.nz/guandan](https://ai3d.co.nz/guandan/)** 即可直接使用，无需注册或安装。
 
 ### 本地开发
 
@@ -90,10 +85,9 @@ pnpm run dev
 | UI 框架 | [React](https://reactjs.org/) 19 |
 | 构建工具 | [Vite](https://vitejs.dev/) 7 |
 | 包管理 | [pnpm](https://pnpm.io/) |
-| 本地存储 | [LocalForage](https://localforage.github.io/localForage/) (IndexedDB) |
 | 配对算法 | [rescript-blossom](https://github.com/johnridesabike/rescript-blossom) |
 | 测试 | [Vitest](https://vitest.dev/) |
-| 托管 | [Netlify](https://www.netlify.com/) |
+
 
 ---
 
@@ -109,12 +103,7 @@ pnpm run dev
 
 ## 致谢
 
-- 徽标中的"国王"图案源自 Mérida 国际象棋字体
-- 界面设计参考了 [Photon Design System](https://design.firefox.com/photon/)
-- 斯诺克配对算法基于 [Blossom algorithm](https://en.wikipedia.org/wiki/Blossom_algorithm)
+- 系统以https://github.com/johnridesabike/coronate为基础进行开发
+- 使用了Codebuddy作为开发工具。
 
----
 
-## 许可证
-
-[MPL-2.0](./LICENSE)
