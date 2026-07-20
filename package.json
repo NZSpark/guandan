@@ -1,0 +1,73 @@
+{
+  "name": "guandan-rank",
+  "description": "Aotearoa掼蛋俱乐部排位系统 - 基于瑞士移位制的掼蛋比赛管理工具。",
+  "author": {
+    "name": "Spark Zheng",
+    "email": "spark.zheng@icloud.com",
+    "url": "https://ai3d.co.nz/"
+  },
+  "license": "MPL-2.0",
+  "private": true,
+  "homepage": "https://ai3d.co.nz/guandan",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NZSpark/guandan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NZSpark/guandan/issues",
+    "email": "spark.zheng@icloud.com"
+  },
+  "packageManager": "pnpm@10.22.0+sha512.bf049efe995b28f527fd2b41ae0474ce29186f7edcb3bf545087bd61fbbebb2bf75362d1307fda09c2d288e1e499787ac12d4fcb617a974718a6051f2eee741c",
+  "scripts": {
+    "res:build": "rescript",
+    "res:clean": "rescript clean",
+    "res:dev": "rescript -w",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "format": "rescript format -all"
+  },
+  "dependencies": {
+    "@fontsource/fira-sans": "^5.2.7",
+    "@octokit/core": "^7.0.6",
+    "@reach/dialog": "^0.18.0",
+    "@reach/tabs": "^0.18.0",
+    "@reach/visually-hidden": "^0.18.0",
+    "@rescript/core": "^1.6.1",
+    "@rescript/react": "^0.14.0",
+    "@ryyppy/rescript-promise": "^2.1.0",
+    "favicons": "^7.1.2",
+    "localforage": "^1.10.0",
+    "localforage-getitems": "^1.4.2",
+    "localforage-removeitems": "^1.4.0",
+    "localforage-setitems": "^1.4.0",
+    "nanoid": "^5.1.6",
+    "netlify-auth-providers": "^1.0.0-alpha5",
+    "numeral": "^2.0.6",
+    "photon-colors": "^3.3.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-feather": "^2.0.10",
+    "rescript-blossom": "^4.0.0",
+    "rescript-webapi": "^0.10.0",
+    "vitest": "^3.2.4"
+  },
+  "devDependencies": {
+    "@jihchi/vite-plugin-rescript": "^7.1.0",
+    "@peterek/vite-plugin-favicons": "^2.1.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@vitejs/plugin-react": "^5.1.1",
+    "jsdom": "^27.2.0",
+    "rescript": "^11.1.4",
+    "rescript-vitest": "^2.1.1",
+    "vite": "^7.2.2"
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not op_mini all"
+  ]
+}
