@@ -1,80 +1,31 @@
-# Changelog
+# 更新日志
 
-## 2024-01-01
+## 2026-07
 
-- Enable sorting on more player lists.
-- Add "1-0" style score notation to the tournament round page.
-- Add custom names for White and Black.
+- 发布 Aotearoa掼蛋俱乐部排位系统 v2.0。
+- **三种赛制支持**：瑞士移位制、小组单循环赛（蛇形分组+圈圈法排表）、淘汰赛（种子排位）。
+- **级差计分系统**：按掼蛋级数（2–A）录入结果，自动计算场分、净积小分、累积小分。
+  计分规则参照《南山杯 Aotearoa 掼蛋大赛指南（2026）》及《掼蛋（国家）竞赛规则（2017版）》。
+  - 场分：胜 3 / 平 2 / 负 1
+  - 破同分顺序：总积分 → 相互胜负 → 净积小分 → 累积小分
+- **队伍管理模式**：双人固定配对，支持所属俱乐部、当前积分、CSV 批量导入。
+- 赛事配对算法使用 Blossom 算法，优先同分对战、上下半区配对。
+- 新增回避机制：可设置队伍之间不再相遇。
+- 淘汰赛自动种子排位，支持按俱乐部分布优化对阵。
+- 中文界面全覆盖。
 
-## 2023-03-22
+## 2024–2025 (v1.x)
 
-- Player profile pages now show a table with win, loss, and draw statistics.
+项目前身 Coronate（国际象棋瑞士制赛事管理器）由 John Jackson 开发维护。
+2025 年底由 Spark Zheng 基于 Coronate 重构为掼蛋排位系统。
 
-## 2023-03-20
+Coronate 早期更新（已废弃）：
+- Elo 等级分计算、K-factor 调整。
+- 白方/黑方颜色均衡配对。
+- 多种国际象棋破同分规则（Modified Median, Solkoff, Cumulative 等）。
+- Netlify 部署、GitHub Gist 备份。
+- ReScript + React 技术栈迁移。
 
-- On the player profile page, the "players to avoid" list now sorts by name.
-- Fixed some subtle bugs with the "players to avoid" list.
-- Reformatted changelog to use dates instead of version numbers. Old version
-  numbers are preserved parenthetically.
+## 2021-01
 
-## 2022-08-09
-
-- Added new match results that support asynchronous tournaments.
-
-## 2022-04-06
-
-- Fixed the auto-pair algorithm to more correctly weight score differences.
-- Made some screens more printer-friendly.
-- Changed K-factor calculation to be more conservative.
-- Added help windows that explain the Swiss system, pairing rules, and tie-break
-  rules.
-
-## 2022-03-01
-
-- Adjusted how K-factor is displayed in player profiles.
-
-## 2021-08-03 (1.5.1)
-
-- Players can now take voluntary byes.
-- Each individual bye can have a custom point value: full, half, or zero. (This
-  is controlled by changing who won the round.)
-- The default bye value can be set to full, half, or zero.
-- The tournament pairing screen allows pre-selecting the winner of each match.
-- Added a link to this changelog with the version information.
-
-## 2021-05-10 (1.4.0)
-
-- Moved hosting to Netlify.
-- Added "export to gist" feature.
-  - Added basic authentication with GitHub.
-
-## 2021-04-28 (1.3.0)
-
-- Relicensed to MPL 2.0.
-
-## 2021-03-30 (1.2.0)
-
-- Made layout responsive so it works on mobile screens.
-
-## 2021-03-15 (1.1.2)
-
-- Added "Buy Me a Coffee" button and tweaked splash page.
-- Internal changes:
-  - Migrated to ReScript.
-  - Ejected from Create-React-App to optimize build system.
-  - Simplified CSS.
-
-## 2021-01-07 (1.1.1)
-
-- Fix crashes when a tournament contains deleted players.
-
-## 2020-08-25 (1.1)
-
-- Added application version to "About" dialog.
-- Added ability to manually adjust scores of players per-tournament.
-- Various performance and stability improvements.
-- Removed Electron desktop version.
-
-## 2019-10-30 (1.0)
-
-- Initial release
+- 首个发布版本（1.0），以 Coronate 命名。

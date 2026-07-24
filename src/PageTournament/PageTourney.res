@@ -9,6 +9,14 @@
 open! Belt
 open Data
 
+/* Tab navigation — use proper variants instead of magic ints */
+type tab =
+  | Status      /* 积分榜 */
+  | Setup       /* 设置 */
+  | Players     /* 选手管理 */
+  | Round(int)  /* 第 i 轮 (0-based) */
+  | Scores(int) /* 录入第 i 轮分数 (0-based) */
+
 module Inner = {
   @react.component
   let make = (~data: LoadTournament.t) => {
@@ -17,23 +25,18 @@ module Inner = {
 
     let (activeTab, setActiveTab) = React.useState(() =>
       if Rounds.size(roundList) > 0 {
-        Rounds.size(roundList) - 1
+        Round(Rounds.size(roundList) - 1)
       } else {
-        -1
+        Status
       }
     )
-    /* Use -1 for Status, round index for Round, 1000 + round index for Scores, etc. */
-    /* Simple int encoding for active tab: -1=Status, -2=Setup, -3=Players, -4=Loading, n>=0=Round(n), 1000+n=Scores(n) */
-    let tabIs = (v, _i) => activeTab == v
-    let tabIsRound = i => activeTab == i
-    let tabIsScores = i => activeTab == 1000 + i
 
     /* Map Pages.Page.t callbacks to activeTab switching */
     let goToPage = (page: Pages.Page.t) =>
       switch page {
-      | TourneySetup(_) => setActiveTab(_ => -2)
-      | TourneyPlayers(_) => setActiveTab(_ => -3)
-      | Tourney(_) => setActiveTab(_ => -1)
+      | TourneySetup(_) => setActiveTab(_ => Setup)
+      | TourneyPlayers(_) => setActiveTab(_ => Players)
+      | Tourney(_) => setActiveTab(_ => Status)
       | TournamentList | Options | Players | Help | NotFound => ()
       }
 
@@ -41,34 +44,30 @@ module Inner = {
       let newRoundList = Rounds.addRound(roundList)
       let newRoundId = Rounds.size(newRoundList) - 1
       setTourney({...tourney, roundList: newRoundList})
-      setActiveTab(_ => newRoundId)
+      setActiveTab(_ => Round(newRoundId))
     }
 
     let renderTab = () =>
-      if activeTab < 0 {
-        switch activeTab {
-        | -2 => <PageTourneySetup tourney setTourney goToPage />
-        | -3 => <PageTourneyPlayers tourney setTourney data goToPage />
-        | -4 => React.string("加载中...")
-        | _ => <PageTournamentStatus data />
-        }
-      } else if activeTab >= 1000 {
-        <PageTourneyScores data roundId={activeTab - 1000} />
-      } else {
-        <PageRound roundId=activeTab data config=Config.default />
+      switch activeTab {
+      | Setup => <PageTourneySetup tourney setTourney goToPage />
+      | Players => <PageTourneyPlayers tourney setTourney data goToPage />
+      | Status => <PageTournamentStatus data />
+      | Scores(i) => <PageTourneyScores data roundId=i />
+      | Round(i) => <PageRound roundId=i data config=Config.default />
       }
 
-    let isStatus = tabIs(activeTab, -1)
-    let isSetupOrPlayers = tabIs(activeTab, -2) || tabIs(activeTab, -3)
+    let isStatus = switch activeTab { | Status => true | Setup | Players | Round(_) | Scores(_) => false }
+    let isSetupOrPlayers = switch activeTab { | Setup | Players => true | Status | Round(_) | Scores(_) => false }
 
     let makeRoundTabs = () => {
       let lastKey = Rounds.getLastKey(roundList)
       Array.makeBy(lastKey + 1, i => {
         let isComplete = Rounds.isRoundComplete(roundList, data.activeTeams, i)
+        let isSelected = switch activeTab { | Round(j) => i == j | Status | Setup | Players | Scores(_) => false }
         <button
           key={Int.toString(i)}
-          className={"button button-micro" ++ (tabIsRound(i) ? " button-primary" : "")}
-          onClick={_ => setActiveTab(_ => i)}>
+          className={"button button-micro" ++ (isSelected ? " button-primary" : "")}
+          onClick={_ => setActiveTab(_ => Round(i))}>
           {React.string("第" ++ Int.toString(i + 1) ++ "轮")}
           {isComplete ? React.string(" ✓") : React.null}
         </button>
@@ -77,28 +76,29 @@ module Inner = {
 
     let scoreRoundsTabs = () => {
       Array.makeBy(Rounds.size(roundList), i => {
+        let isSelected = switch activeTab { | Scores(j) => i == j | Status | Setup | Players | Round(_) => false }
         <button
           key={"score-" ++ Int.toString(i)}
-          className={"button button-micro" ++ (tabIsScores(i) ? " button-primary" : "")}
-          onClick={_ => setActiveTab(_ => 1000 + i)}>
+          className={"button button-micro" ++ (isSelected ? " button-primary" : "")}
+          onClick={_ => setActiveTab(_ => Scores(i))}>
           {React.string("录入第" ++ Int.toString(i + 1) ++ "轮")}
         </button>
       })
     }
 
-    let isCurrentTabRound = activeTab >= 0 && activeTab < 1000
+    let isCurrentTabRound = switch activeTab { | Round(_) => true | Status | Setup | Players | Scores(_) => false }
 
     <>
       <h1> {React.string(tourney.name)} </h1>
       <div style={marginBottom: "0.5rem"}>
         <button
           className={"button button-micro" ++ (isStatus ? " button-primary" : "")}
-          onClick={_ => setActiveTab(_ => -1)}>
+          onClick={_ => setActiveTab(_ => Status)}>
           {React.string("积分榜")}
         </button>
         <button
           className={"button button-micro" ++ (isSetupOrPlayers ? " button-primary" : "")}
-          onClick={_ => setActiveTab(_ => -2)}>
+          onClick={_ => setActiveTab(_ => Setup)}>
           {React.string("设置")}
         </button>
         {makeRoundTabs()->React.array}
