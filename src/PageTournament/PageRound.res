@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 module Id = Data.Id
 
@@ -28,25 +27,27 @@ let make = (
       scoreData,
       activeTeams,
       config.avoidTeamPairs,
+      ~avoidClubs=config.avoidClubs,
     )
     let (pairDataWithoutBye, maybeByeTeam) = Pairing.setByeTeam(byeQueue, Id.teamBye, pairData)
     let pairs = Pairing.pairTeams(pairDataWithoutBye)
+    let timeLimit = tourney.timeLimitMinutes
     let newMatches = pairs->Array.map(((t1Id, t2Id)) => {
-      switch (Map.get(activeTeams, t1Id), Map.get(activeTeams, t2Id)) {
-      | (Some(t1), Some(t2)) => Match.manualPair(~team1=t1, ~team2=t2)
-      | _ => Match.manualPair(~team1=Team.bye, ~team2=Team.bye)
+      switch (Id.Map.get(activeTeams, t1Id), Id.Map.get(activeTeams, t2Id)) {
+      | (Some(t1), Some(t2)) => Match.manualPair(~team1=t1, ~team2=t2, ~timeLimitMinutes=timeLimit)
+      | _ => Match.manualPair(~team1=Team.bye, ~team2=Team.bye, ~timeLimitMinutes=timeLimit)
       }
     })
 
     let byeMatch = switch maybeByeTeam {
-    | Some(pairTeam) => switch Map.get(activeTeams, pairTeam->Pairing.id) {
-      | Some(team) => [Match.manualPair(~team1=team, ~team2=Team.bye)]
+    | Some(pairTeam) => switch Id.Map.get(activeTeams, pairTeam->Pairing.id) {
+      | Some(team) => [Match.manualPair(~team1=team, ~team2=Team.bye, ~timeLimitMinutes=timeLimit)]
       | None => []
       }
     | None => []
     }
 
-    let allMatches = Belt.Array.concatMany([newMatches, byeMatch])
+    let allMatches = Array.concat(newMatches, byeMatch)
     switch Rounds.set(roundList, roundId, Rounds.Round.fromArray(allMatches)) {
     | Some(newRoundList) => setTourney({...tourney, roundList: newRoundList})
     | None => ()
@@ -55,14 +56,15 @@ let make = (
 
   /* 小组赛配对：生成全部轮次 */
   let handleGroupStageAutoPair = (groupCount: int) => {
-    let (_groups, allRoundMatches) = GroupStage.generateSchedule(activeTeams, scoreData, groupCount)
+    let (_groups, allRoundMatches) = GroupStage.generateSchedule(activeTeams, scoreData, groupCount, ~randomDraw=tourney.groupRandomDraw)
 
+    let timeLimit = tourney.timeLimitMinutes
     let newRoundListRef = ref(roundList)
-    Array.forEachWithIndex(allRoundMatches, (i, roundMatches) => {
+    Array.forEachWithIndex(allRoundMatches, (roundMatches, i) => {
       let newMatches = roundMatches->Array.map(((t1Id, t2Id)) => {
-        switch (Map.get(activeTeams, t1Id), Map.get(activeTeams, t2Id)) {
-        | (Some(t1), Some(t2)) => Match.manualPair(~team1=t1, ~team2=t2)
-        | _ => Match.manualPair(~team1=Team.bye, ~team2=Team.bye)
+        switch (Id.Map.get(activeTeams, t1Id), Id.Map.get(activeTeams, t2Id)) {
+        | (Some(t1), Some(t2)) => Match.manualPair(~team1=t1, ~team2=t2, ~timeLimitMinutes=timeLimit)
+        | _ => Match.manualPair(~team1=Team.bye, ~team2=Team.bye, ~timeLimitMinutes=timeLimit)
         }
       })
       switch Rounds.set(newRoundListRef.contents, i, Rounds.Round.fromArray(newMatches)) {
@@ -82,15 +84,42 @@ let make = (
       else { Knockout.Four }
     let bracket = Knockout.generateBracket(activeTeams, scoreData, size)
 
+    let timeLimit = tourney.timeLimitMinutes
     let newMatches = bracket->Array.map(entry => {
-      switch (Map.get(activeTeams, entry.team1Id), Map.get(activeTeams, entry.team2Id)) {
-      | (Some(t1), Some(t2)) => Match.manualPair(~team1=t1, ~team2=t2)
-      | _ => Match.manualPair(~team1=Team.bye, ~team2=Team.bye)
+      switch (Id.Map.get(activeTeams, entry.team1Id), Id.Map.get(activeTeams, entry.team2Id)) {
+      | (Some(t1), Some(t2)) => Match.manualPair(~team1=t1, ~team2=t2, ~timeLimitMinutes=timeLimit)
+      | _ => Match.manualPair(~team1=Team.bye, ~team2=Team.bye, ~timeLimitMinutes=timeLimit)
       }
     })
 
     switch Rounds.set(roundList, roundId, Rounds.Round.fromArray(newMatches)) {
     | Some(newRoundList) => setTourney({...tourney, roundList: newRoundList})
+    | None => ()
+    }
+  }
+
+  /* 淘汰赛：从当前轮胜者生成下一轮对阵 */
+  let handleKnockoutNextRound = () => {
+    switch currRound {
+    | Some(r) =>
+      let currentRoundMatches = Rounds.Round.toArray(r)
+      let nextPairs = Knockout.generateNextRoundPairs(currentRoundMatches)
+      if Array.length(nextPairs) > 0 {
+        let timeLimit = tourney.timeLimitMinutes
+        let newMatches = nextPairs->Array.map(((t1Id, t2Id)) => {
+          switch (Id.Map.get(activeTeams, t1Id), Id.Map.get(activeTeams, t2Id)) {
+          | (Some(t1), Some(t2)) => Match.manualPair(~team1=t1, ~team2=t2, ~timeLimitMinutes=timeLimit)
+          | _ => Match.manualPair(~team1=Team.bye, ~team2=Team.bye, ~timeLimitMinutes=timeLimit)
+          }
+        })
+        let nextRoundId = Rounds.size(roundList)
+        switch Rounds.set(roundList, nextRoundId, Rounds.Round.fromArray(newMatches)) {
+        | Some(newRoundList) => setTourney({...tourney, roundList: newRoundList})
+        | None => ()
+        }
+      } else {
+        Webapi.Dom.Window.alert(Webapi.Dom.window, "部分比赛结果未录入，或已到决赛。请先完成本轮所有比赛的录入。")
+      }
     | None => ()
     }
   }
@@ -103,7 +132,7 @@ let make = (
     }
 
   let handleAddManualPair = (team1: Team.t, team2: Team.t) => {
-    let newMatch = Match.manualPair(~team1, ~team2)
+    let newMatch = Match.manualPair(~team1, ~team2, ~timeLimitMinutes=tourney.timeLimitMinutes)
     let newRound = switch currRound {
     | Some(r) => Rounds.Round.addMatches(r, [newMatch])
     | None => Rounds.Round.fromArray([newMatch])
@@ -148,7 +177,7 @@ let make = (
   | None => []
   }
 
-  let matchCards = matchList->Array.mapWithIndex((_i, m) => {
+  let matchCards = matchList->Array.mapWithIndex((m, _i) => {
     let t1Name = getTeamDisplay(m.team1Id)
     let t2Name = getTeamDisplay(m.team2Id)
     let resultStr = switch m.result.winner {
@@ -196,8 +225,8 @@ let make = (
       </div>
       <div>
         <h3> {React.string("未配对队伍")} </h3>
-        <p> {React.string("剩余 " ++ Int.toString(Map.size(unmatched)) ++ " 支队伍")} </p>
-        {unmatched->Map.valuesToArray->Array.map(t =>
+        <p> {React.string("剩余 " ++ Int.toString(Id.Map.size(unmatched)) ++ " 支队伍")} </p>
+        {unmatched->Id.Map.valuesToArray->Array.map(t =>
           <div key={Id.toString(t.id)} className="card" style={marginBottom: "0.25rem"}>
             <div className="card-body">
               <strong> {React.string(t.name)} </strong>
@@ -207,17 +236,32 @@ let make = (
       </div>
     </div>
     <div style={marginTop: "1rem"}>
-      <button className="button button-primary" onClick={_ => handleAutoPair()}>
-        {React.string("自动配对未匹配队伍")}
-      </button>
+      {let isKnockout = switch format {
+      | Tournament.Format.Knockout(_) => true
+      | Tournament.Format.Swiss | Tournament.Format.GroupStage(_) => false
+      }
+      if isKnockout && Rounds.size(roundList) > 0 {
+        /* 淘汰赛已生成首轮后，显示"生成下一轮"按钮 */
+        if !data.isItOver && data.isNewRoundReady {
+          <button className="button button-primary" onClick={_ => handleKnockoutNextRound()}>
+            {React.string("从胜者生成下一轮淘汰对阵")}
+          </button>
+        } else {
+          React.null
+        }
+      } else {
+        <button className="button button-primary" onClick={_ => handleAutoPair()}>
+          {React.string("自动配对未匹配队伍")}
+        </button>
+      }}
       <button className="button" onClick={_ => setShowPairPicker(_ => true)} style={marginLeft: "0.5rem"}>
         {React.string("手动添加对阵")}
       </button>
     </div>
     {if showPairPicker {
-      let pairedIds = matchList->Array.flatMap(m => [m.team1Id, m.team2Id])->Set.fromArray(~id=Id.id)
-      let availableTeams = Map.keep(unmatchedWithBye, (id, _) =>
-        !Set.has(pairedIds, id) || Id.isTeamBye(id)
+      let pairedIds = matchList->Array.flatMap(m => [m.team1Id, m.team2Id])->Id.Set.fromArray
+      let availableTeams = Id.Map.keep(unmatchedWithBye, (id, _) =>
+        !Id.Set.has(pairedIds, id) || Id.isTeamBye(id)
       )
       <div style={marginTop: "1rem"}>
         <PairPicker

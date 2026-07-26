@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0.
 */
-open! Belt
 open Data
 
 @react.component
@@ -19,20 +18,75 @@ let make = (~tourney: Tournament.t, ~setTourney: Tournament.t => unit, ~goToPage
   let changeFormat = e => {
     let value = ReactEvent.Form.target(e)["value"]
     let newFormat = Tournament.Format.fromString(value)
-    setTourney({...tourney, format: newFormat})
+    /* Auto-set time limit defaults when changing format */
+    let defaultTimeLimit = switch newFormat {
+    | Tournament.Format.Swiss => Some(70)
+    | Tournament.Format.GroupStage(_) => Some(70)
+    | Tournament.Format.Knockout(_) => Some(120)
+    }
+    setTourney({...tourney, format: newFormat, timeLimitMinutes: defaultTimeLimit})
+  }
+
+  let changeSwissRounds = e => {
+    let value = ReactEvent.Form.target(e)["value"]
+    let rounds = switch value {
+    | "" => None
+    | s => Some(Int.fromString(s)->Option.getOr(3))
+    }
+    setTourney({...tourney, swissRounds: rounds})
+  }
+
+  let changeTimeLimit = e => {
+    let value = ReactEvent.Form.target(e)["value"]
+    let limit = switch value {
+    | "" => None
+    | s => Some(Int.fromString(s)->Option.getOr(70))
+    }
+    setTourney({...tourney, timeLimitMinutes: limit})
   }
 
   /* 显示当前赛制的额外选项 */
   let formatSpecificOptions = switch tourney.format {
-  | Tournament.Format.Swiss => React.null
-  | Tournament.Format.GroupStage({groupCount}) =>
+  | Tournament.Format.Swiss =>
+    let rounds = switch tourney.swissRounds {
+    | Some(n) => n->Int.toString
+    | None => ""
+    }
     <div className="form-group">
-      <label> {React.string("分组数")} </label>
-      <small>
-        {React.string("当前 " ++ Int.toString(groupCount) ++ " 组。" ++
-          "可通过格式字符串调整（group:分组数）。")}
-      </small>
+      <label htmlFor="swissRounds"> {React.string("瑞士制轮数（留空自动计算）")} </label>
+      <input
+        id="swissRounds"
+        type_="number"
+        min="1" max="10"
+        value=rounds
+        placeholder="自动 (log2 n)"
+        onChange=changeSwissRounds
+      />
+      <small> {React.string("建议 3~4 轮。留空则按 log₂(n) 自动计算。")} </small>
     </div>
+  | Tournament.Format.GroupStage({groupCount}) =>
+    <>
+      <div className="form-group">
+        <label> {React.string("分组数")} </label>
+        <small>
+          {React.string("当前 " ++ Int.toString(groupCount) ++ " 组。" ++
+            "可通过格式字符串调整（group:分组数）。")}
+        </small>
+      </div>
+      <div className="form-group">
+        <label>
+          <input
+            type_="checkbox"
+            checked={tourney.groupRandomDraw}
+            onChange={_ => setTourney({...tourney, groupRandomDraw: !tourney.groupRandomDraw})}
+          />
+          {React.string(" 使用随机抽签分组（按积分分档后档内随机）")}
+        </label>
+        <small>
+          {React.string("默认蛇形分组。勾选后，按积分分档，档内随机抽签分配各组。")}
+        </small>
+      </div>
+    </>
   | Tournament.Format.Knockout({teamCount}) =>
     <div className="form-group">
       <label> {React.string("淘汰赛规模")} </label>
@@ -85,13 +139,35 @@ let make = (~tourney: Tournament.t, ~setTourney: Tournament.t => unit, ~goToPage
       </div>
       {formatSpecificOptions}
       <div className="form-group">
+        <label htmlFor="timeLimit"> {React.string("每局时间限制（分钟）")} </label>
+        <input
+          id="timeLimit"
+          type_="number"
+          min="0" max="300"
+          value={switch tourney.timeLimitMinutes {
+          | Some(n) => n->Int.toString
+          | None => ""
+          }}
+          placeholder="默认：海选/小组赛70，淘汰赛/决赛120"
+          onChange=changeTimeLimit
+        />
+        <small>
+          {React.string("海选赛/小组赛建议70分钟，淘汰赛/决赛建议120分钟。留空无限制。")}
+        </small>
+      </div>
+      <div className="form-group">
         <label> {React.string("破同分规则")} </label>
-        <p> {React.string("总积分 → 相互胜负 → 净积小分 → 累积小分")} </p>
+        {switch tourney.format {
+        | Tournament.Format.Swiss =>
+          <p> {React.string("总积分 → 对手分 → 胜场数 → 贡献分（累积小分）")} </p>
+        | Tournament.Format.GroupStage(_) | Tournament.Format.Knockout(_) =>
+          <p> {React.string("总积分 → 相互胜负 → 净积小分 → 累积小分")} </p>
+        }}
         <small> {React.string("参照南山杯2026附录一。")} </small>
       </div>
       <div className="form-group">
-        <label> {React.string("场分规则")} </label>
-        <p> {React.string("胜 3 分 / 平 2 分 / 负 1 分 / 轮空 3 分")} </p>
+        <label> {React.string("场分规则（2026）")} </label>
+        <p> {React.string("胜 1 分 / 平 0.5 分 / 负 0 分 / 缺席 -1 分 / 轮空 1 分")} </p>
       </div>
       <button type_="submit" className="button button-primary" disabled={tourney.name == ""}>
         {React.string("下一步：添加参赛队伍")}

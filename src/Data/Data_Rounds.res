@@ -7,7 +7,6 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 
-open! Belt
 module Match = Data_Match
 module Id = Data_Id
 
@@ -30,25 +29,21 @@ module Round = {
   let addMatches = (arr1, arr2) => Array.concat(arr1, arr2)
 
   /* flatten all of the ids from the matches to one array. */
-  let getMatched = (round: t) => {
-    let q = MutableQueue.make()
-    Array.forEach(round, ({team1Id, team2Id, _}) => {
-      MutableQueue.add(q, team1Id)
-      MutableQueue.add(q, team2Id)
-    })
-    MutableQueue.toArray(q)
-  }
+  let getMatched = (round: t) =>
+    Array.concatMany([], round->Array.map(({team1Id, team2Id, _}) => [team1Id, team2Id]))
 
-  let getMatchById = (round: t, id) => Array.getBy(round, x => Id.eq(x.id, id))
+  let getMatchById = (round: t, id) => Array.find(round, x => Id.eq(x.id, id))
 
-  let removeMatchById = (round: t, id) => Array.keep(round, x => !Id.eq(x.id, id))
+  let removeMatchById = (round: t, id) => Array.filter(round, x => !Id.eq(x.id, id))
 
   let setMatch = (round: t, match: Data_Match.t) => {
     let round = Array.copy(round)
     round
-    ->Array.getIndexBy(({Match.id: id, _}) => Id.eq(id, match.id))
-    ->Option.map(x => round[x] = match)
-    ->Option.flatMap(wasSuccessful => wasSuccessful ? Some(round) : None)
+    ->Array.findIndexOpt(({Match.id: id, _}) => Id.eq(id, match.id))
+    ->Option.map(x => {
+      let _ = round[x] = match
+      round
+    })
   }
 
   let moveMatch = (round, matchId, direction) =>
@@ -82,30 +77,25 @@ let get = (arr, i) => arr[i]
 
 let set = (rounds, key, round) => {
   let rounds = Array.copy(rounds)
-  let wasSuccessful = rounds[key] = round
-  wasSuccessful ? Some(rounds) : None
+  let _ = rounds[key] = round
+  Some(rounds)
 }
 
 let setMatch = (rounds, key, match_) =>
   rounds->get(key)->Option.flatMap(Round.setMatch(_, match_))->Option.flatMap(set(rounds, key, ...))
 
-let rounds2Matches = roundList => {
-  module Q = MutableQueue
-  let q = Q.make()
-  Array.forEach(roundList, r => r->Q.fromArray->Q.transfer(q))
-  q
-}
+let rounds2Matches = roundList => Array.concatMany([], roundList)
 
 let isRoundComplete = (roundList, teams, roundId) =>
   switch roundList[roundId] {
   | Some(round) =>
-    if roundId < Array.size(roundList) - 1 {
+    if roundId < Array.length(roundList) - 1 {
       true
     } else {
       let matched = Round.getMatched(round)
-      let unmatched = Map.removeMany(teams, matched)
+      let unmatched = Id.Map.removeMany(teams, matched)
       let results = Array.map(round, match => match.result.winner)
-      Map.size(unmatched) == 0 && !Js.Array2.includes(results, None)
+      Id.Map.size(unmatched) == 0 && !Js.Array2.includes(results, None)
     }
   | None => true
   }

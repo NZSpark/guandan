@@ -60,7 +60,7 @@ let set: (t, int, Round.t) => option<t>
 
 let setMatch: (t, int, Data_Match.t) => option<t>
 
-let rounds2Matches: t => Belt.MutableQueue.t<Data_Match.t>
+let rounds2Matches: t => array<Data_Match.t>
 
 let isRoundComplete: (t, Data_Id.Map.t<Data_Team.t>, int) => bool
 

@@ -39,15 +39,37 @@ module Map: {
   type key = t
   type t<'v> = Belt.Map.t<key, 'v, identity>
 
-  let fromStringArray: array<(string, 'v)> => t<'v>
-
+  let fromArray: array<(key, 'v)> => t<'v>
   let toStringArray: t<'v> => array<(string, 'v)>
   let keysToStringArray: t<'v> => array<string>
+  let make: unit => t<'v>
+  let set: (t<'v>, key, 'v) => t<'v>
+  let get: (t<'v>, key) => option<'v>
+  let update: (t<'v>, key, option<'v> => option<'v>) => t<'v>
+  let remove: (t<'v>, key) => t<'v>
+  let removeMany: (t<'v>, array<key>) => t<'v>
+  let size: t<'v> => int
+  let toArray: t<'v> => array<(key, 'v)>
+  let valuesToArray: t<'v> => array<'v>
+  let map: (t<'a>, 'a => 'b) => t<'b>
+  let keep: (t<'a>, (key, 'a) => bool) => t<'a>
+  let reduce: (t<'a>, 'b, ('b, key, 'a) => 'b) => 'b
+  let mapWithKey: (t<'a>, (key, 'a) => 'b) => t<'b>
+  let merge: (t<'a>, t<'b>, (key, option<'a>, option<'b>) => option<'c>) => t<'c>
+  let has: (t<'v>, key) => bool
 }
 
 module Set: {
   type value = t
   type t = Belt.Set.t<value, identity>
+  let make: unit => t
+  let fromArray: array<value> => t
+  let toArray: t => array<value>
+  let has: (t, value) => bool
+  let add: (t, value) => t
+  let size: t => int
+  let remove: (t, value) => t
+  let union: (t, t) => t
 }
 
 module Pair: {
@@ -63,6 +85,9 @@ module Pair: {
   module Set: {
     type pair = t
     type t = Belt.Set.t<pair, identity>
+    let make: unit => t
+    let fromArray: array<pair> => t
+    let toArray: t => array<pair>
     let encode: t => Js.Json.t
     let decode: Js.Json.t => t
 

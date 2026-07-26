@@ -35,6 +35,7 @@ type actionConfig =
   | DelAvoidTeamPair(Data.Id.Pair.t)
   | DelAvoidTeamSingle(Data.Id.t)
   | SetAvoidTeamPairs(Data.Id.Pair.Set.t)
+  | SetAvoidClubs(bool)
   | SetState(Data.Config.t)
   | SetLastBackup(Js.Date.t)
 

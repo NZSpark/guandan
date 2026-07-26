@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 module Id = Data_Id
 
@@ -70,7 +69,7 @@ let make = (~data: LoadTournament.t, ~roundId: int) => {
     {if Array.length(matchList) == 0 {
       <p> {React.string("本轮暂无比赛。")} </p>
     } else {
-      matchList->Array.mapWithIndex((_, m) => {
+      matchList->Array.mapWithIndex((m, _) => {
         let team1Name = getTeamName(m.team1Id)
         let team2Name = getTeamName(m.team2Id)
         let isByeMatch = Match.isBye(m)

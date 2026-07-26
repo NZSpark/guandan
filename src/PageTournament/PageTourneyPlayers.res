@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 module Id = Data_Id
 
@@ -21,17 +20,17 @@ let make = (
   let {teamIds, _} = tourney
 
   let toggleTeam = (id: Id.t) =>
-    if Set.has(teamIds, id) {
-      setTourney({...tourney, teamIds: Set.remove(teamIds, id)})
+    if Id.Set.has(teamIds, id) {
+      setTourney({...tourney, teamIds: Id.Set.remove(teamIds, id)})
     } else {
-      setTourney({...tourney, teamIds: Set.add(teamIds, id)})
+      setTourney({...tourney, teamIds: Id.Set.add(teamIds, id)})
     }
 
-  let allTeams = teams->Map.valuesToArray->SortArray.stableSortBy((a, b) =>
+  let allTeams = teams->Id.Map.valuesToArray->Utils.Array.toSortedByInt((a, b) =>
     compare(a.name, b.name)
   )
 
-  let selectedCount = Set.toArray(teamIds)->Array.length
+  let selectedCount = Id.Set.toArray(teamIds)->Array.length
 
   <>
     <h2> {React.string("赛事队伍 — " ++ tourney.name)} </h2>
@@ -40,7 +39,7 @@ let make = (
     </p>
     <div className="grid">
       {allTeams->Array.map(t => {
-        let isSelected = Set.has(teamIds, t.id)
+        let isSelected = Id.Set.has(teamIds, t.id)
         let p1 = getPlayer(t.player1Id)
         let p2 = getPlayer(t.player2Id)
         <div

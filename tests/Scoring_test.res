@@ -8,7 +8,6 @@
 */
 open Vitest
 open Data
-open! Belt
 module Id = Data_Id
 
 /* ═══════════════════════════════════════════════════════════
@@ -75,13 +74,13 @@ describe("Level.cumulativeSmallScore", () => {
    Data_Scoring 单元测试
    ═══════════════════════════════════════════════════════════ */
 
-test("FieldScore constants match 掼蛋规则", t => {
-  /* 掼蛋场分：胜3/平2/负1/缺席0/轮空3 */
-  t->expect(Scoring.FieldScore.win)->Expect.toBe(3.0)
-  t->expect(Scoring.FieldScore.draw)->Expect.toBe(2.0)
-  t->expect(Scoring.FieldScore.lose)->Expect.toBe(1.0)
-  t->expect(Scoring.FieldScore.absent)->Expect.toBe(0.0)
-  t->expect(Scoring.FieldScore.bye)->Expect.toBe(3.0)
+test("FieldScore constants match 掼蛋2026规则", t => {
+  /* 掼蛋2026附录一：胜1/平0.5/负0/缺席-1/轮空1 */
+  t->expect(Scoring.FieldScore.win)->Expect.toBe(1.0)
+  t->expect(Scoring.FieldScore.draw)->Expect.toBe(0.5)
+  t->expect(Scoring.FieldScore.lose)->Expect.toBe(0.0)
+  t->expect(Scoring.FieldScore.absent)->Expect.toBe(-1.0)
+  t->expect(Scoring.FieldScore.bye)->Expect.toBe(1.0)
 })
 
 test("Scoring.make initializes empty scoring record", t => {
@@ -89,6 +88,8 @@ test("Scoring.make initializes empty scoring record", t => {
   t->expect(s.teamId)->Expect.toBe(TestData.tNanshan.id)
   t->expect(s.id)->Expect.toBe(TestData.tNanshan.id)
   t->expect(s.totalFieldScore)->Expect.toBe(0.0)
+  t->expect(s.opponentScore)->Expect.toBe(0.0)
+  t->expect(s.wins)->Expect.toBe(0)
   t->expect(s.totalNetSmallScore)->Expect.toBe(0)
   t->expect(s.totalCumulativeSmallScore)->Expect.toBe(0)
   t->expect(s.byeCount)->Expect.toBe(0)
@@ -99,7 +100,7 @@ describe("Scoring.update accumulates match results", () => {
     let result = Scoring.update(
       None,
       ~teamId=TestData.tNanshan.id,
-      ~fieldScore=3.0,
+      ~fieldScore=1.0,
       ~netSmall=5,
       ~cumSmall=11,
       ~oppId=TestData.tLeiting.id,
@@ -108,7 +109,8 @@ describe("Scoring.update accumulates match results", () => {
     switch result {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(3.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(1.0)
+      t->expect(s.wins)->Expect.toBe(1)
       t->expect(s.totalNetSmallScore)->Expect.toBe(5)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(11)
       t->expect(s.byeCount)->Expect.toBe(0)
@@ -120,7 +122,7 @@ describe("Scoring.update accumulates match results", () => {
     let afterWin = Scoring.update(
       None,
       ~teamId=TestData.tNanshan.id,
-      ~fieldScore=3.0,
+      ~fieldScore=1.0,
       ~netSmall=5,
       ~cumSmall=11,
       ~oppId=TestData.tLeiting.id,
@@ -129,7 +131,7 @@ describe("Scoring.update accumulates match results", () => {
     let afterDraw = Scoring.update(
       afterWin,
       ~teamId=TestData.tNanshan.id,
-      ~fieldScore=2.0,
+      ~fieldScore=0.5,
       ~netSmall=0,
       ~cumSmall=8,
       ~oppId=TestData.tZhongqu.id,
@@ -138,7 +140,8 @@ describe("Scoring.update accumulates match results", () => {
     switch afterDraw {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(5.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(1.5)
+      t->expect(s.wins)->Expect.toBe(1)
       t->expect(s.totalNetSmallScore)->Expect.toBe(5)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(19)
       t->expect(List.length(s.results))->Expect.toBe(2)
@@ -149,7 +152,7 @@ describe("Scoring.update accumulates match results", () => {
     let result = Scoring.update(
       None,
       ~teamId=TestData.tNanshan.id,
-      ~fieldScore=3.0,
+      ~fieldScore=1.0,
       ~netSmall=0,
       ~cumSmall=0,
       ~oppId=Id.teamBye,
@@ -169,75 +172,78 @@ describe("Scoring.update accumulates match results", () => {
 let scores: Id.Map.t<Scoring.t> =
   Scoring.fromTournament(
     ~roundList=TestData.testTournament.roundList,
-    ~scoreAdjustments=Map.make(~id=Id.id),
+    ~scoreAdjustments=Id.Map.make(),
   )
 
 describe("Scoring.fromTournament computes correct per-team scores", () => {
-  test("南山闪电: W vs 雷霆, field=3.0, net=+5, cum=11", t => {
-    switch Map.get(scores, TestData.tNanshan.id) {
+  test("南山闪电: W vs 雷霆, field=1.0, net=+5, cum=11, wins=1", t => {
+    switch Id.Map.get(scores, TestData.tNanshan.id) {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(3.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(1.0)
+      t->expect(s.wins)->Expect.toBe(1)
       t->expect(s.totalNetSmallScore)->Expect.toBe(5)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(11)
     }
   })
 
-  test("雷霆战队: L vs 南山, field=1.0, net=-5, cum=6", t => {
-    switch Map.get(scores, TestData.tLeiting.id) {
+  test("雷霆战队: L vs 南山, field=0.0, net=-5, cum=6", t => {
+    switch Id.Map.get(scores, TestData.tLeiting.id) {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(1.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(0.0)
       t->expect(s.totalNetSmallScore)->Expect.toBe(-5)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(6)
     }
   })
 
-  test("东区虎啸: L vs 风云, field=1.0, net=-1, cum=9", t => {
-    switch Map.get(scores, TestData.tDongqu.id) {
+  test("东区虎啸: L vs 风云, field=0.0, net=-1, cum=9", t => {
+    switch Id.Map.get(scores, TestData.tDongqu.id) {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(1.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(0.0)
       t->expect(s.totalNetSmallScore)->Expect.toBe(-1)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(9)
     }
   })
 
-  test("风云双雄: W vs 东区, field=3.0, net=+1, cum=10", t => {
-    switch Map.get(scores, TestData.tFengyun.id) {
+  test("风云双雄: W vs 东区, field=1.0, net=+1, cum=10, wins=1", t => {
+    switch Id.Map.get(scores, TestData.tFengyun.id) {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(3.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(1.0)
+      t->expect(s.wins)->Expect.toBe(1)
       t->expect(s.totalNetSmallScore)->Expect.toBe(1)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(10)
     }
   })
 
-  test("中区飞鹰: draw, field=2.0, net=0, cum=8", t => {
-    switch Map.get(scores, TestData.tZhongqu.id) {
+  test("中区飞鹰: draw, field=0.5, net=0, cum=8", t => {
+    switch Id.Map.get(scores, TestData.tZhongqu.id) {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(2.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(0.5)
       t->expect(s.totalNetSmallScore)->Expect.toBe(0)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(8)
     }
   })
 
-  test("群英荟萃: W vs 钻石, field=3.0, net=+5(Ace 14-N9=5), cum=13(14-2+1)", t => {
-    switch Map.get(scores, TestData.tQunying.id) {
+  test("群英荟萃: W vs 钻石, field=1.0, net=+5(Ace 14-N9=5), cum=13(14-2+1), wins=1", t => {
+    switch Id.Map.get(scores, TestData.tQunying.id) {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(3.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(1.0)
+      t->expect(s.wins)->Expect.toBe(1)
       t->expect(s.totalNetSmallScore)->Expect.toBe(5)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(13)
     }
   })
 
-  test("钻石风暴: L vs 群英, field=1.0, net=-5, cum=7", t => {
-    switch Map.get(scores, TestData.tZuanshi.id) {
+  test("钻石风暴: L vs 群英, field=0.0, net=-5, cum=7", t => {
+    switch Id.Map.get(scores, TestData.tZuanshi.id) {
     | None => assert(false)
     | Some(s) =>
-      t->expect(s.totalFieldScore)->Expect.toBe(1.0)
+      t->expect(s.totalFieldScore)->Expect.toBe(0.0)
       t->expect(s.totalNetSmallScore)->Expect.toBe(-5)
       t->expect(s.totalCumulativeSmallScore)->Expect.toBe(7)
     }
@@ -249,23 +255,23 @@ describe("Scoring.fromTournament computes correct per-team scores", () => {
    ═══════════════════════════════════════════════════════════ */
 
 test("Scoring.createStandingArray ranks by fieldScore desc, then tiebreaks", t => {
-  let standings: array<Scoring.teamScores> = scores->Scoring.createStandingArray(Map.make(~id=Id.id))
+  let standings: array<Scoring.teamScores> = scores->Scoring.createStandingArray(Id.Map.make())
   /* 8 teams, sorted */
   t->expect(Array.length(standings))->Expect.toBe(8)
 
   /* Helper: extract teamScore by index with explicit type */
   let get = (i): Scoring.teamScores => standings[i]->Option.getExn
 
-  /* Top 3: all 3.0, ordered by cumulativeSmallScore: 群英(13) > 南山(11) > 风云(10) */
+  /* Top 3: all 1.0, ordered by cumulativeSmallScore: 群英(13) > 南山(11) > 风云(10) */
   t->expect(get(0).id)->Expect.toBe(TestData.tQunying.id)
   t->expect(get(1).id)->Expect.toBe(TestData.tNanshan.id)
   t->expect(get(2).id)->Expect.toBe(TestData.tFengyun.id)
 
-  /* Middle 2: both 2.0, ordered by cumulative: 中区(8) = 北岸(8), then net: 中区(0) = 北岸(0) */
-  t->expect(get(3).fieldScore)->Expect.toBe(2.0)
-  t->expect(get(4).fieldScore)->Expect.toBe(2.0)
+  /* Middle 2: both 0.5, ordered by cum+net: 中区(8) = 北岸(8), then net: 中区(0) = 北岸(0) */
+  t->expect(get(3).fieldScore)->Expect.toBe(0.5)
+  t->expect(get(4).fieldScore)->Expect.toBe(0.5)
 
-  /* Bottom 3: all 1.0, ordered by cumulative: 东区(9) > 钻石(7) > 雷霆(6) */
+  /* Bottom 3: all 0.0, ordered by cumulative: 东区(9) > 钻石(7) > 雷霆(6) */
   t->expect(get(5).id)->Expect.toBe(TestData.tDongqu.id)
   t->expect(get(6).id)->Expect.toBe(TestData.tZuanshi.id)
   t->expect(get(7).id)->Expect.toBe(TestData.tLeiting.id)
@@ -276,25 +282,25 @@ test("Scoring.createStandingArray ranks by fieldScore desc, then tiebreaks", t =
    ═══════════════════════════════════════════════════════════ */
 
 test("Scoring.createStandingTree groups teams with equal scores", t => {
-  let standingsArr = scores->Scoring.createStandingArray(Map.make(~id=Id.id))
+  let standingsArr = scores->Scoring.createStandingArray(Id.Map.make())
   let tree = Scoring.createStandingTree(standingsArr, ~tieBreaks=Scoring.defaultTieBreaks)
 
   /* Tree should have separate groups for different score levels */
-  /* 3.0 group: 3 teams */
-  /* 2.0 group: 2 teams (same cum+net, drawn each other → same group) */
   /* 1.0 group: 3 teams (different cum, separate groups) */
+  /* 0.5 group: 2 teams (same field+net+cum → same group) */
+  /* 0.0 group: 3 teams (different cum, separate groups) */
 
   switch tree {
   | list{first, second, third, fourth, fifth, sixth, ..._} =>
-    /* 3.0 teams all separate (different cum scores) */
+    /* 1.0 teams all separate (different cum scores) */
     t->expect(List.length(first))->Expect.toBe(1)
     t->expect(List.length(second))->Expect.toBe(1)
     t->expect(List.length(third))->Expect.toBe(1)
 
-    /* 2.0 teams: same field+net+cum → same group */
+    /* 0.5 teams: same field+net+cum → same group */
     t->expect(List.length(fourth))->Expect.toBe(2)
 
-    /* 1.0 teams: different cum → separate groups */
+    /* 0.0 teams: different cum → separate groups */
     t->expect(List.length(fifth))->Expect.toBe(1)
     t->expect(List.length(sixth))->Expect.toBe(1)
 
@@ -309,22 +315,32 @@ test("Scoring.createStandingTree groups teams with equal scores", t => {
 test("TieBreak.toString returns correct strings", t => {
   t->expect(Scoring.TieBreak.toString(Scoring.TieBreak.TotalFieldScore))->Expect.toBe("totalFieldScore")
   t->expect(Scoring.TieBreak.toString(Scoring.TieBreak.DirectEncounter))->Expect.toBe("directEncounter")
+  t->expect(Scoring.TieBreak.toString(Scoring.TieBreak.OpponentScore))->Expect.toBe("opponentScore")
+  t->expect(Scoring.TieBreak.toString(Scoring.TieBreak.Wins))->Expect.toBe("wins")
   t->expect(Scoring.TieBreak.toString(Scoring.TieBreak.NetSmallScore))->Expect.toBe("netSmallScore")
   t->expect(Scoring.TieBreak.toString(Scoring.TieBreak.CumulativeSmallScore))->Expect.toBe("cumulativeSmallScore")
 })
 
 test("TieBreak.encode/decode roundtrip", t => {
-  let breaks = [Scoring.TieBreak.TotalFieldScore, Scoring.TieBreak.DirectEncounter, Scoring.TieBreak.NetSmallScore, Scoring.TieBreak.CumulativeSmallScore]
+  let breaks = [Scoring.TieBreak.TotalFieldScore, Scoring.TieBreak.DirectEncounter, Scoring.TieBreak.OpponentScore, Scoring.TieBreak.Wins, Scoring.TieBreak.NetSmallScore, Scoring.TieBreak.CumulativeSmallScore]
   Array.forEach(breaks, b => {
     t->expect(b->Scoring.TieBreak.encode->Scoring.TieBreak.decode)->Expect.toBe(b)
   })
 })
 
-test("defaultTieBreaks has correct priority order", t => {
-  let breaks = Scoring.defaultTieBreaks
+test("defaultTieBreaks has correct priority order (group)", t => {
+  let breaks = Scoring.groupTieBreaks
   t->expect(breaks[0]->Option.getExn)->Expect.toBe(Scoring.TieBreak.TotalFieldScore)
   t->expect(breaks[1]->Option.getExn)->Expect.toBe(Scoring.TieBreak.DirectEncounter)
   t->expect(breaks[2]->Option.getExn)->Expect.toBe(Scoring.TieBreak.NetSmallScore)
+  t->expect(breaks[3]->Option.getExn)->Expect.toBe(Scoring.TieBreak.CumulativeSmallScore)
+})
+
+test("swissTieBreaks has correct priority order", t => {
+  let breaks = Scoring.swissTieBreaks
+  t->expect(breaks[0]->Option.getExn)->Expect.toBe(Scoring.TieBreak.TotalFieldScore)
+  t->expect(breaks[1]->Option.getExn)->Expect.toBe(Scoring.TieBreak.OpponentScore)
+  t->expect(breaks[2]->Option.getExn)->Expect.toBe(Scoring.TieBreak.Wins)
   t->expect(breaks[3]->Option.getExn)->Expect.toBe(Scoring.TieBreak.CumulativeSmallScore)
 })
 
@@ -338,7 +354,7 @@ test("oppResultsToSumById returns sum of field scores vs opponent", t => {
   let after = Scoring.update(
     Some(s),
     ~teamId=TestData.tNanshan.id,
-    ~fieldScore=3.0,
+    ~fieldScore=1.0,
     ~netSmall=5,
     ~cumSmall=11,
     ~oppId=TestData.tLeiting.id,
@@ -347,8 +363,8 @@ test("oppResultsToSumById returns sum of field scores vs opponent", t => {
   switch after {
   | None => assert(false)
   | Some(sc) =>
-    /* One W vs 雷霆 = 3.0 */
+    /* One W vs 雷霆 = 1.0 (2026规则) */
     let sum = Scoring.oppResultsToSumById(sc, TestData.tLeiting.id)
-    t->expect(sum)->Expect.toBe(Some(3.0))
+    t->expect(sum)->Expect.toBe(Some(1.0))
   }
 })

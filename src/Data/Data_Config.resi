@@ -9,6 +9,8 @@
 
 type t = {
   avoidTeamPairs: Data_Id.Pair.Set.t,
+  /** 是否自动避免同俱乐部队相遇（瑞士制配对时生效） */
+  avoidClubs: bool,
   lastBackup: Js.Date.t,
 }
 

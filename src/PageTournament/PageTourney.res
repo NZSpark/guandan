@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 
 /* Tab navigation — use proper variants instead of magic ints */
@@ -61,7 +60,7 @@ module Inner = {
 
     let makeRoundTabs = () => {
       let lastKey = Rounds.getLastKey(roundList)
-      Array.makeBy(lastKey + 1, i => {
+      Array.fromInitializer(~length=lastKey + 1, i => {
         let isComplete = Rounds.isRoundComplete(roundList, data.activeTeams, i)
         let isSelected = switch activeTab { | Round(j) => i == j | Status | Setup | Players | Scores(_) => false }
         <button
@@ -75,7 +74,7 @@ module Inner = {
     }
 
     let scoreRoundsTabs = () => {
-      Array.makeBy(Rounds.size(roundList), i => {
+      Array.fromInitializer(~length=Rounds.size(roundList), i => {
         let isSelected = switch activeTab { | Scores(j) => i == j | Status | Setup | Players | Round(_) => false }
         <button
           key={"score-" ++ Int.toString(i)}

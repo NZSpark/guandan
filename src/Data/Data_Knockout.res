@@ -7,7 +7,6 @@
   - 同一俱乐部/社团的队伍尽量分到不同半区和不同对阵
   - 支持 16 队 / 8 队 / 4 队
 */
-open! Belt
 module Id = Data_Id
 module Scoring = Data_Scoring
 
@@ -51,15 +50,15 @@ let seedTeams = (
   scoreData: Id.Map.t<Scoring.t>,
 ): array<Id.t> => {
   let scored = teams
-  ->Map.toArray
+  ->Id.Map.toArray
   ->Array.map(((id, team)) => {
-    let score = switch Map.get(scoreData, id) {
+    let score = switch Id.Map.get(scoreData, id) {
     | Some(s) => s.totalFieldScore
     | None => team.initialScore
     }
     (id, team.club, score)
   })
-  let _ = scored->Belt.SortArray.stableSortBy(((_, _, a), (_, _, b)) => compare(b, a))
+  let _ = Utils.Array.toSortedByInt(scored, ((_, _, a), (_, _, b)) => compare(b, a))
   Array.map(scored, ((id, _, _)) => id)
 }
 
@@ -76,7 +75,7 @@ let getSeed = (seededIds: array<Id.t>, seedNum: int): Id.t => {
 /** 检测对阵中是否有同俱乐部冲突 */
 let hasClubClash = (br: array<bracketEntry>, teams: Id.Map.t<Data_Team.t>, idx: int): bool => {
   let entry = Array.getUnsafe(br, idx)
-  switch (Map.get(teams, entry.team1Id), Map.get(teams, entry.team2Id)) {
+  switch (Id.Map.get(teams, entry.team1Id), Id.Map.get(teams, entry.team2Id)) {
   | (Some(a), Some(b)) => a.club != "" && a.club == b.club
   | _ => false
   }
@@ -110,7 +109,7 @@ let buildBracket = (
   let half = n / 2
 
   /* 构建初始对阵（不可变） */
-  let initialBracket = Array.mapWithIndex(template, (_, (s1, s2, label)) => {
+  let initialBracket = Array.mapWithIndex(template, ((s1, s2, label), _) => {
     let t1 = getSeed(seededIds, s1)
     let t2 = getSeed(seededIds, s2)
     ({matchLabel: label, team1Id: t1, team2Id: t2} : bracketEntry)
@@ -125,7 +124,7 @@ let buildBracket = (
     let clashIdxsRef = ref([])
     for i in 0 to n - 1 {
       if hasClubClash(current, teams, i) {
-        clashIdxsRef.contents = Belt.Array.concatMany([clashIdxsRef.contents, [i]])
+        clashIdxsRef.contents = Array.concatMany(clashIdxsRef.contents, [[i]])
       }
     }
     let clashIdxs = clashIdxsRef.contents
@@ -134,7 +133,7 @@ let buildBracket = (
       let targetIdx = Array.getUnsafe(clashIdxs, 0)
       let target = Array.getUnsafe(current, targetIdx)
       let conflictTeam = target.team1Id
-      let conflictClub = switch Map.get(teams, conflictTeam) {
+      let conflictClub = switch Id.Map.get(teams, conflictTeam) {
       | Some(t) => t.club
       | None => ""
       }
@@ -147,7 +146,7 @@ let buildBracket = (
       for ti in start to end_ - 1 {
         if !swapped.contents {
           let source = Array.getUnsafe(current, ti)
-          let club1 = switch Map.get(teams, source.team1Id) {
+          let club1 = switch Id.Map.get(teams, source.team1Id) {
           | Some(t) => t.club
           | None => ""
           }
@@ -155,7 +154,7 @@ let buildBracket = (
             let oldClashes = countClashes(current, teams)
 
             /* 构建交换后的 bracket */
-            let newBr = Array.makeBy(n, j =>
+            let newBr = Array.fromInitializer(~length=n, j =>
               if j == targetIdx {
                 {matchLabel: target.matchLabel, team1Id: source.team1Id, team2Id: target.team2Id}
               } else if j == ti {
@@ -177,7 +176,7 @@ let buildBracket = (
   }
 
   /* 过滤掉轮空对阵 */
-  bracketRef.contents->Array.keep(b => !Id.isTeamBye(b.team1Id) && !Id.isTeamBye(b.team2Id))
+  bracketRef.contents->Array.filter(b => !Id.isTeamBye(b.team1Id) && !Id.isTeamBye(b.team2Id))
 }
 
 /** 从 teams 和 scoreData 生成完整淘汰赛对阵表 */
@@ -193,9 +192,40 @@ let generateBracket = (
   | Four => 4
   }
   let selectedIds = if Array.length(seeded) > maxSize {
-    Array.slice(seeded, ~offset=0, ~len=maxSize)
+    Array.slice(seeded, ~start=0, ~end=maxSize)
   } else {
     seeded
   }
   buildBracket(selectedIds, teams, size)
+}
+
+/**
+  获取比赛获胜方ID。None 表示结果未录入或平局。
+  淘汰赛平局时，按2026规则加赛一副牌打2，头游获胜。
+  此处返回 None 以提示裁判手动处理平局。
+*/
+let getWinner = (m: Data_Match.t): option<Id.t> =>
+  switch m.result.winner {
+  | Some(Data_Match.Result.Team1Won) => Some(m.team1Id)
+  | Some(Data_Match.Result.Team2Won) => Some(m.team2Id)
+  | None => None
+  }
+
+/**
+  从当前轮比赛结果生成下一轮淘汰赛对阵。
+  按标准bracket递进：相邻两场比赛的胜者互相对阵。
+  例如：16强中 (1vs16)胜者 vs (8vs9)胜者 → 8强配对。
+  返回：下一轮对阵列表 (team1Id, team2Id)，或空列表（已到决赛/null）。
+*/
+let generateNextRoundPairs = (currentRoundMatches: array<Data_Match.t>): array<(Id.t, Id.t)> => {
+  let winners = Array.filterMap(currentRoundMatches, getWinner)
+  if Array.length(winners) < 2 {
+    []
+  } else {
+    Array.fromInitializer(~length=Array.length(winners) / 2, i => {
+      let t1 = Array.getUnsafe(winners, i * 2)
+      let t2 = Array.getUnsafe(winners, i * 2 + 1)
+      (t1, t2)
+    })
+  }
 }

@@ -5,7 +5,6 @@
   选手与队伍统一管理页面：队伍与选手一体处理，
   姓名字段不拆分，支持积分管理与CSV导入。
 */
-open! Belt
 open Data
 module Id = Data_Id
 
@@ -45,20 +44,20 @@ let make = (~windowDispatch: Window.action => unit) => {
       let data = ev["target"]["result"]
       try {
         let (newPlayers, newTeams) = Data_CSV.importData(data)
-        let numPlayers = Map.size(newPlayers)
-        let numTeams = Map.size(newTeams)
+        let numPlayers = Id.Map.size(newPlayers)
+        let numTeams = Id.Map.size(newTeams)
         if numPlayers == 0 || numTeams == 0 {
           setImportMsg(_ => "CSV解析失败：未找到有效数据。请检查文件格式。")
         } else {
           /* Merge with existing data (keep existing, add new) */
-          let mergedPlayers = Map.merge(newPlayers, players, (_key, optNew, optOld) =>
+          let mergedPlayers = Id.Map.merge(newPlayers, players, (_key, optNew, optOld) =>
             switch (optOld, optNew) {
             | (Some(existing), _) => Some(existing)
             | (None, Some(new_)) => Some(new_)
             | (None, None) => None
             }
           )
-          let mergedTeams = Map.merge(newTeams, teams, (_key, optNew, optOld) =>
+          let mergedTeams = Id.Map.merge(newTeams, teams, (_key, optNew, optOld) =>
             switch (optOld, optNew) {
             | (Some(existing), _) => Some(existing)
             | (None, Some(new_)) => Some(new_)
@@ -68,8 +67,8 @@ let make = (~windowDispatch: Window.action => unit) => {
           playersDispatch(SetAll(mergedPlayers))
           teamsDispatch(SetAll(mergedTeams))
           /* Auto-create default tournament if none exists */
-          let baseMsg = "成功导入 " ++ Belt.Int.toString(numPlayers) ++ " 名选手，" ++ Belt.Int.toString(numTeams) ++ " 支队伍。"
-          if Map.size(tournaments) == 0 {
+          let baseMsg = "成功导入 " ++ Int.toString(numPlayers) ++ " 名选手，" ++ Int.toString(numTeams) ++ " 支队伍。"
+          if Id.Map.size(tournaments) == 0 {
             let defaultId = Id.random()
             tourneysDispatch(Set(defaultId, Data.Tournament.make(~id=defaultId, ~name="南山杯2026掼蛋大赛")))
             setImportMsg(_ => baseMsg ++ " 已自动创建赛事「南山杯2026掼蛋大赛」。")
@@ -107,7 +106,7 @@ let make = (~windowDispatch: Window.action => unit) => {
       let p1: Data_Player.t = {id: p1Id, firstName: player1Name, lastName: "", gender: player1Gender}
       let p2: Data_Player.t = {id: p2Id, firstName: player2Name, lastName: "", gender: player2Gender}
 
-      let scoreFloat = Belt.Float.fromString(score)->Belt.Option.getWithDefault(0.0)
+      let scoreFloat = Float.fromString(score)->Option.getWithDefault(0.0)
 
       playersDispatch(Set(p1Id, p1))
       playersDispatch(Set(p2Id, p2))
@@ -133,7 +132,7 @@ let make = (~windowDispatch: Window.action => unit) => {
 
   let delTeam = (id: Id.t) => {
     /* Also delete associated players */
-    let team = Map.get(teams, id)
+    let team = Id.Map.get(teams, id)
     switch team {
     | Some(t) =>
       playersDispatch(Del(t.player1Id))
@@ -145,8 +144,8 @@ let make = (~windowDispatch: Window.action => unit) => {
 
   /* Sort teams by score descending, then by name */
   let teamList = teams
-    ->Map.valuesToArray
-    ->SortArray.stableSortBy((a, b) =>
+    ->Id.Map.valuesToArray
+    ->Utils.Array.toSortedByInt((a, b) =>
       switch compare(b.initialScore, a.initialScore) {
       | 0 => Team.compareName(a, b)
       | x => x
@@ -295,7 +294,7 @@ let make = (~windowDispatch: Window.action => unit) => {
         }}
 
         // Team list
-        <h2> {React.string("队伍列表")} ({React.int(Map.size(teams))}) </h2>
+        <h2> {React.string("队伍列表")} ({React.int(Id.Map.size(teams))}) </h2>
         {if Array.length(teamList) == 0 {
           <p> {React.string("暂无队伍，请通过表单添加或导入CSV文件。")} </p>
         } else {

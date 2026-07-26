@@ -5,7 +5,6 @@
   Parses CSV format:
   队伍名称,队员1,性别,队员2,性别,所属俱乐部/社团,当前积分
 */
-open! Belt
 module Id = Data_Id
 
 type row = {
@@ -33,7 +32,7 @@ let parseLine = (line: string): option<row> => {
   let len = Js.Array2.length(parts)
   if len >= 6 {
     let scoreStr = getField(parts, 6)
-    let score = Belt.Float.fromString(scoreStr)->Belt.Option.getWithDefault(0.0)
+    let score = Float.fromString(scoreStr)->Option.getOr(0.0)
     Some({
       teamName: getField(parts, 0),
       player1Name: getField(parts, 1),
@@ -63,7 +62,7 @@ let parse = (text: string): array<row> => {
     trimmed != "" && !Js.String2.startsWith(trimmed, "队伍名称")
   })
   ->Js.Array2.map(parseLine)
-  ->Array.keepMap(x => x)
+  ->Array.filterMap(x => x)
 }
 
 /**
@@ -73,8 +72,8 @@ let parse = (text: string): array<row> => {
  */
 let importData = (text: string): (Id.Map.t<Data_Player.t>, Id.Map.t<Data_Team.t>) => {
   let rows = parse(text)
-  let mutablePlayers = ref(Map.make(~id=Id.id))
-  let mutableTeams = ref(Map.make(~id=Id.id))
+  let mutablePlayers = ref(Id.Map.make())
+  let mutableTeams = ref(Id.Map.make())
 
   Array.forEach(rows, row => {
     let p1: Data_Player.t = {
@@ -90,8 +89,8 @@ let importData = (text: string): (Id.Map.t<Data_Player.t>, Id.Map.t<Data_Team.t>
       gender: row.player2Gender,
     }
 
-    mutablePlayers := Map.set(mutablePlayers.contents, p1.id, p1)
-    mutablePlayers := Map.set(mutablePlayers.contents, p2.id, p2)
+    mutablePlayers := Id.Map.set(mutablePlayers.contents, p1.id, p1)
+    mutablePlayers := Id.Map.set(mutablePlayers.contents, p2.id, p2)
 
     let team: Data_Team.t = {
       id: Id.random(),
@@ -102,7 +101,7 @@ let importData = (text: string): (Id.Map.t<Data_Player.t>, Id.Map.t<Data_Team.t>
       club: row.club,
       initialScore: row.score,
     }
-    mutableTeams := Map.set(mutableTeams.contents, team.id, team)
+    mutableTeams := Id.Map.set(mutableTeams.contents, team.id, team)
   })
 
   (mutablePlayers.contents, mutableTeams.contents)

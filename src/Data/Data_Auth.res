@@ -10,18 +10,16 @@ type t = {
   github_gist_id: string,
 }
 
-module Option = Belt.Option
-
 let decode = json => {
   let d = Js.Json.decodeObject(json)->Option.getExn
   {
     github_token: d
     ->Js.Dict.get("github_token")
-    ->Option.flatMap(Js.Json.decodeString)
+    ->Option.flatMap(x => Js.Json.decodeString(x))
     ->Option.getExn,
     github_gist_id: d
     ->Js.Dict.get("github_gist_id")
-    ->Option.flatMap(Js.Json.decodeString)
+    ->Option.flatMap(x => Js.Json.decodeString(x))
     ->Option.getExn,
   }
 }

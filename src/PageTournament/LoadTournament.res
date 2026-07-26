@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 module Id = Data.Id
 
@@ -35,7 +34,11 @@ let calcNumOfRoundsKnockout = teamCount => {
 
 let calcNumOfRounds = (tourney: Tournament.t, activeTeamCount: int): int =>
   switch tourney.format {
-  | Tournament.Format.Swiss => calcNumOfRoundsSwiss(activeTeamCount)
+  | Tournament.Format.Swiss =>
+    switch tourney.swissRounds {
+    | Some(n) => n
+    | None => calcNumOfRoundsSwiss(activeTeamCount)
+    }
   | Tournament.Format.GroupStage({groupCount}) => calcNumOfRoundsGroupStage(activeTeamCount, groupCount)
   | Tournament.Format.Knockout({teamCount}) => calcNumOfRoundsKnockout(teamCount)
   }
@@ -75,7 +78,7 @@ let make = (~children, ~tourneyId, ~windowDispatch) => {
   let (tourneyLoaded, setTourneyLoaded) = React.useState(() => NotLoaded)
   Hooks.useLoadingCursorUntil(isLoadedDone(tourneyLoaded) && areTeamsLoaded && arePlayersLoaded)
 
-  let getTeam = id => Map.get(teams, id)
+  let getTeam = id => Id.Map.get(teams, id)
   let getPlayer = Player.getMaybe(players, ...)
 
   let actualWindowDispatch = switch windowDispatch {
@@ -124,8 +127,8 @@ let make = (~children, ~tourneyId, ~windowDispatch) => {
 
   switch (tourneyLoaded, areTeamsLoaded, arePlayersLoaded) {
   | (Loaded, true, true) =>
-    let activeTeams = Map.keep(teams, (id, _) => Set.has(teamIds, id))
-    let roundCount = calcNumOfRounds(tourney, Map.size(activeTeams))
+    let activeTeams = Id.Map.keep(teams, (id, _) => Id.Set.has(teamIds, id))
+    let roundCount = calcNumOfRounds(tourney, Id.Map.size(activeTeams))
     let lastRoundId = Rounds.size(roundList) - 1
 
     /* For non-Swiss formats, all rounds are generated upfront, so the tournament is over

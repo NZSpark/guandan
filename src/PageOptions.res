@@ -6,17 +6,25 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 
 @val external _devMode: bool = "import.meta.env.DEV"
+
+let pad2 = n => {
+  let s = Int.toString(n)
+  if String.length(s) < 2 {
+    "0" ++ s
+  } else {
+    s
+  }
+}
 
 let getDateForFile = () => {
   let date = Js.Date.make()
   [
     date->Js.Date.getFullYear->Float.toString,
-    (Js.Date.getMonth(date) +. 1.0)->Numeral.make->Numeral.format("00"),
-    Js.Date.getDate(date)->Numeral.make->Numeral.format("00"),
+    (Js.Date.getMonth(date) +. 1.0)->Int.fromFloat->pad2,
+    Js.Date.getDate(date)->Int.fromFloat->pad2,
   ]->Js.Array2.joinWith("-")
 }
 
@@ -26,7 +34,7 @@ let invalidAlert = () =>
     "数据无效！目前暂无法提供更详细的错误信息。",
   )
 
-let dictToMap = dict => dict->Js.Dict.entries->Data.Id.Map.fromStringArray
+let dictToMap = dict => dict->Js.Dict.entries->Array.map(((k, v)) => (Data_Id.fromString(k), v))->Data.Id.Map.fromArray
 let mapToDict = map => map->Data.Id.Map.toStringArray->Js.Dict.fromArray
 
 type input_data = {
@@ -43,31 +51,31 @@ let decodeOptions = json => {
     config: d->Js.Dict.get("config")->Option.getExn->Config.decode,
     players: d
     ->Js.Dict.get("players")
-    ->Option.flatMap(Js.Json.decodeObject)
+    ->Option.flatMap(x => Js.Json.decodeObject(x))
     ->Option.getExn
     ->dictToMap
-    ->Map.map(Player.decode),
+    ->Data.Id.Map.map(Player.decode),
     teams: d
     ->Js.Dict.get("teams")
-    ->Option.flatMap(Js.Json.decodeObject)
+    ->Option.flatMap(x => Js.Json.decodeObject(x))
     ->Option.getExn
     ->dictToMap
-    ->Map.map(Team.decode),
+    ->Data.Id.Map.map(Team.decode),
     tournaments: d
     ->Js.Dict.get("tournaments")
-    ->Option.flatMap(Js.Json.decodeObject)
+    ->Option.flatMap(x => Js.Json.decodeObject(x))
     ->Option.getExn
     ->dictToMap
-    ->Map.map(Tournament.decode),
+    ->Data.Id.Map.map(Tournament.decode),
   }
 }
 
 let encodeOptions = data =>
   Js.Dict.fromArray([
     ("config", Config.encode(data.config)),
-    ("players", Map.map(data.players, Player.encode)->mapToDict->Js.Json.object_),
-    ("teams", Map.map(data.teams, Team.encode)->mapToDict->Js.Json.object_),
-    ("tournaments", Map.map(data.tournaments, Tournament.encode)->mapToDict->Js.Json.object_),
+    ("players", Data.Id.Map.map(data.players, Player.encode)->mapToDict->Js.Json.object_),
+    ("teams", Data.Id.Map.map(data.teams, Team.encode)->mapToDict->Js.Json.object_),
+    ("tournaments", Data.Id.Map.map(data.tournaments, Tournament.encode)->mapToDict->Js.Json.object_),
   ])->Js.Json.object_
 
 module LastBackupDate = {
@@ -391,6 +399,20 @@ let make = (~windowDispatch=_ => ()) => {
 
   <Window.Body windowDispatch>
     <div className="content-area">
+      <h2> {React.string("配对设置")} </h2>
+      <div className="form-group">
+        <label>
+          <input
+            type_="checkbox"
+            checked=config.avoidClubs
+            onChange={_ => configDispatch(SetAvoidClubs(!config.avoidClubs))}
+          />
+          {React.string(" 瑞士制配对时自动避免同俱乐部队相遇。")}
+        </label>
+        <small>
+          {React.string("开启后，同俱乐部的队伍在瑞士移位制中不会被自动配对到一起。")}
+        </small>
+      </div>
       <h2> {React.string("数据管理")} </h2>
       <p className="caption-20">
         {React.string("上次导出：")}

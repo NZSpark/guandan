@@ -38,10 +38,13 @@ module SwissTournament = {
   let make = (~state, ~ariaLabel) =>
     <BaseDialog state ariaLabel>
       <p>
-        {React.string("Aotearoa掼蛋俱乐部排位系统使用瑞士移位制。它设定固定的轮次数，根据场分配对各队伍，但任何两支队伍不会相遇两次。瑞士制会产生唯一的第一名，但后续排名可能有并列，使用破同分策略确定最终排名。")}
+        {React.string("Aotearoa掼蛋俱乐部排位系统支持三种赛制：瑞士移位制、小组循环赛和淘汰赛。瑞士移位制根据积分配对，同分队相遇且不重复对阵。")}
       </p>
       <p>
-        {React.string("破同分规则: 总积分 → 相互胜负 → 净积小分 → 累积小分")}
+        {React.string("海选赛破同分规则: 总积分 → 对手分 → 胜场数 → 贡献分（累积小分）")}
+      </p>
+      <p>
+        {React.string("小组赛破同分规则: 总积分 → 相互胜负 → 净积小分 → 累积小分")}
       </p>
     </BaseDialog>
 }
@@ -52,10 +55,24 @@ module TieBreaks = {
   @react.component
   let make = (~state, ~ariaLabel) =>
     <BaseDialog state ariaLabel>
-      <p> {React.string("掼蛋破同分规则（参照南山杯2026附录一）：")} </p>
+      <p> {React.string("掼蛋计分与破同分规则（参照南山杯2026附录一）：")} </p>
+      <h3> {React.string("场分规则")} </h3>
+      <p> {React.string("胜方得1分，打平各得0.5分，负方得0分。缺席队伍得-1分（对手自动获胜记1分）。轮空自动获胜记1分。")} </p>
+      <h3> {React.string("海选赛破同分")} </h3>
       <dl>
         <dt className="title-20"> {s(TotalFieldScore)} </dt>
-        <dd> {React.string("各轮场分之和。胜3分，平2分，负1分。")} </dd>
+        <dd> {React.string("各轮场分之和。")} </dd>
+        <dt className="title-20"> {s(OpponentScore)} </dt>
+        <dd> {React.string("所有对手的场分之和（Buchholz 对手分）。对手越强，对手分越高。")} </dd>
+        <dt className="title-20"> {s(Wins)} </dt>
+        <dd> {React.string("胜场数。胜场多者优先。")} </dd>
+        <dt className="title-20"> {s(CumulativeSmallScore)} </dt>
+        <dd> {React.string("各轮累积小分之和。累积小分 = (己方级数-2) + 过A另加1分。")} </dd>
+      </dl>
+      <h3> {React.string("小组赛破同分")} </h3>
+      <dl>
+        <dt className="title-20"> {s(TotalFieldScore)} </dt>
+        <dd> {React.string("各轮场分之和。")} </dd>
         <dt className="title-20"> {s(DirectEncounter)} </dt>
         <dd> {React.string("同分队之间的直接对决结果，胜者优先。")} </dd>
         <dt className="title-20"> {s(NetSmallScore)} </dt>

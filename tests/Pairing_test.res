@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Vitest
 open Data
 module Id = Data_Id
@@ -14,14 +13,14 @@ module Id = Data_Id
 /* Helper: build Pairing.t from tournament data */
 let loadPairData = tourney => {
   let {Tournament.teamIds, roundList, _} = tourney
-  let teamData = Map.reduce(TestData.teams, Map.make(~id=Id.id), (acc, key, team) =>
-    if Set.has(teamIds, key) {
-      Map.set(acc, key, team)
+  let teamData = Id.Map.reduce(TestData.teams, Id.Map.make(), (acc, key, team) =>
+    if Id.Set.has(teamIds, key) {
+      Id.Map.set(acc, key, team)
     } else {
       acc
     }
   )
-  let scoreData = Scoring.fromTournament(~roundList, ~scoreAdjustments=Map.make(~id=Id.id))
+  let scoreData = Scoring.fromTournament(~roundList, ~scoreAdjustments=Id.Map.make())
   Pairing.make(scoreData, teamData, Config.default.avoidTeamPairs)
 }
 
@@ -31,7 +30,7 @@ let loadPairData = tourney => {
 
 test("Pairing.make creates data for all 8 teams", t => {
   let data = loadPairData(TestData.testTournament)
-  t->expect(Map.size(Pairing.teams(data)))->Expect.toBe(8)
+  t->expect(Id.Map.size(Pairing.teams(data)))->Expect.toBe(8)
 })
 
 /* ═══════════════════════════════════════════════════════════
@@ -70,7 +69,7 @@ test("calcPairIdealByIds for non-existent team returns None", t => {
 
 test("setByeTeam returns no bye for even number of teams", t => {
   let data = loadPairData(TestData.testTournament)
-  t->expect(Map.size(Pairing.teams(data)))->Expect.toBe(8)
+  t->expect(Id.Map.size(Pairing.teams(data)))->Expect.toBe(8)
   let (_newData, bye) = Pairing.setByeTeam([], Id.teamBye, data)
   t->expect(bye)->Expect.toBe(None)
 })
@@ -98,11 +97,12 @@ test("pairTeams covers each team exactly once", t => {
   let data = loadPairData(TestData.testTournament)
   let matches = Pairing.pairTeams(data)
 
-  let seen: MutableSet.t<Id.t, Id.identity> = MutableSet.make(~id=Id.id)
+  let seen = Id.Set.make()
+  let seen = ref(seen)
   Array.forEach(matches, ((t1Id, t2Id)) => {
-    MutableSet.add(seen, t1Id) |> ignore
-    MutableSet.add(seen, t2Id) |> ignore
+    seen := Id.Set.add(seen.contents, t1Id)
+    seen := Id.Set.add(seen.contents, t2Id)
   })
   /* 8 teams should all appear once */
-  t->expect(MutableSet.size(seen))->Expect.toBe(8)
+  t->expect(Id.Set.size(seen.contents))->Expect.toBe(8)
 })

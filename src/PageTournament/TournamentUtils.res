@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 module Id = Data.Id
 
@@ -21,17 +20,17 @@ let useRoundData = (
   {tourney: {roundList, _}, activeTeams, _}: LoadTournament.t,
 ) => {
   let scoreData = React.useMemo2(
-    () => Scoring.fromTournament(~roundList, ~scoreAdjustments=Map.make(~id=Id.id)),
+    () => Scoring.fromTournament(~roundList, ~scoreAdjustments=Id.Map.make()),
     (roundList, ()),
   )
   let isThisTheLastRound = roundId == Rounds.getLastKey(roundList)
   let unmatched = switch (Rounds.get(roundList, roundId), isThisTheLastRound) {
   | (Some(round), true) =>
     let matched = Rounds.Round.getMatched(round)
-    Map.removeMany(activeTeams, matched)
-  | _ => Map.make(~id=Id.id)
+    Id.Map.removeMany(activeTeams, matched)
+  | _ => Id.Map.make()
   }
-  let unmatchedWithBye = Map.set(unmatched, Id.teamBye, Team.bye)
+  let unmatchedWithBye = Id.Map.set(unmatched, Id.teamBye, Team.bye)
   {scoreData, unmatched, unmatchedWithBye}
 }
 
@@ -51,7 +50,7 @@ let getScoreInfo = (
   ~teams as _,
   ~getPlayer as _,
 ) => {
-  let {opponentResults, totalFieldScore, totalNetSmallScore, totalCumulativeSmallScore, byeCount, _} = switch Map.get(
+  let {opponentResults, totalFieldScore, totalNetSmallScore, totalCumulativeSmallScore, byeCount, _} = switch Id.Map.get(
     scoreData,
     team.id,
   ) {
@@ -63,7 +62,7 @@ let getScoreInfo = (
   let opponentResults =
     opponentResults
     ->List.toArray
-    ->Array.mapWithIndex((i, (opId, result)) =>
+    ->Array.mapWithIndex(((opId, result), i) =>
       <li key={Data.Id.toString(opId) ++ ("-" ++ Int.toString(i))}>
         {switch getTeam(opId) {
         | Some(t) => t->Team.fullName->React.string

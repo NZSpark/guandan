@@ -3,7 +3,6 @@
   2不必打，A必打。过A为最终胜利。
   数值映射: 2=2, 3=3, ..., 10=10, J=11, Q=12, K=13, A=14
 */
-open! Belt
 
 type t = Two | Three | Four | Five | Six
         | Seven | Eight | Nine | Ten

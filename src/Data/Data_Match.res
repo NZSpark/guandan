@@ -7,7 +7,6 @@
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
 module Id = Data_Id
-module Option = Belt.Option
 
 module Result = {
   type winner = Team1Won | Team2Won
@@ -52,9 +51,9 @@ module Result = {
       team2Level: d->Js.Dict.get("team2Level")->Option.getExn->Data_Level.decode,
       winner: d
       ->Js.Dict.get("winner")
-      ->Option.flatMap(Js.Json.decodeString)
-      ->Option.map(fromString)
-      ->Option.getWithDefault(None),
+      ->Option.flatMap(x => Js.Json.decodeString(x))
+      ->Option.map(x => fromString(x))
+      ->Option.getOr(None),
     }
   }
 
@@ -66,15 +65,15 @@ module Result = {
 
   let fieldScoreForTeam = (result: t, isTeam1: bool): float =>
     switch result.winner {
-    | Some(Team1Won) => isTeam1 ? 3.0 : 1.0
-    | Some(Team2Won) => isTeam1 ? 1.0 : 3.0
-    | None => 2.0  /* 平级各得2分 */
+    | Some(Team1Won) => isTeam1 ? 1.0 : 0.0
+    | Some(Team2Won) => isTeam1 ? 0.0 : 1.0
+    | None => 0.5  /* 平级各得0.5分 */
     }
 
   /** 胜/平/负判定 */
   let resultForTeam = (result: t, isTeam1: bool): string => {
     let fs = fieldScoreForTeam(result, isTeam1)
-    if fs == 3.0 { "W" } else if fs == 2.0 { "D" } else { "L" }
+    if fs == 1.0 { "W" } else if fs == 0.5 { "D" } else { "L" }
   }
 }
 
@@ -84,6 +83,8 @@ type t = {
   team2Id: Id.t,
   result: Result.t,
   tableNumber: option<int>,
+  /** 比赛时间限制（分钟）。海选/小组赛70分钟，淘汰赛/决赛120分钟。 */
+  timeLimitMinutes: option<int>,
 }
 
 let isBye = ({team1Id, team2Id, _}) => Data_Id.isTeamBye(team1Id) || Data_Id.isTeamBye(team2Id)
@@ -97,8 +98,12 @@ let decode = json => {
     result: d->Option.flatMap(d => Js.Dict.get(d, "result"))->Option.getExn->Result.decode,
     tableNumber: d
     ->Option.flatMap(d => Js.Dict.get(d, "tableNumber"))
-    ->Option.flatMap(Js.Json.decodeNumber)
-    ->Option.map(Belt.Float.toInt),
+    ->Option.flatMap(x => Js.Json.decodeNumber(x))
+    ->Option.map(Float.toInt),
+    timeLimitMinutes: d
+    ->Option.flatMap(d => Js.Dict.get(d, "timeLimitMinutes"))
+    ->Option.flatMap(x => Js.Json.decodeNumber(x))
+    ->Option.map(Float.toInt),
   }
 }
 
@@ -110,18 +115,25 @@ let encode = data =>
     ("result", data.result->Result.encode),
     ("tableNumber",
       switch data.tableNumber {
-      | Some(n) => n->Belt.Float.fromInt->Js.Json.number
+      | Some(n) => n->Float.fromInt->Js.Json.number
+      | None => Js.Json.null
+      }
+    ),
+    ("timeLimitMinutes",
+      switch data.timeLimitMinutes {
+      | Some(n) => n->Float.fromInt->Js.Json.number
       | None => Js.Json.null
       }
     ),
   ])->Js.Json.object_
 
-let manualPair = (~team1: Data_Team.t, ~team2: Data_Team.t) => {
+let manualPair = (~team1: Data_Team.t, ~team2: Data_Team.t, ~timeLimitMinutes: option<int>) => {
   id: Id.random(),
   team1Id: team1.id,
   team2Id: team2.id,
   result: Result.makeNotSet(),
   tableNumber: None,
+  timeLimitMinutes,
 }
 
 /**

@@ -27,12 +27,12 @@ describe("Result.fieldScoreForTeam", () => {
     winner: Some(Match.Result.Team1Won),
   }
 
-  test("team1 gets 3.0 when Team1Won", t => {
-    t->expect(Match.Result.fieldScoreForTeam(team1Won, true))->Expect.toBe(3.0)
+  test("team1 gets 1.0 when Team1Won", t => {
+    t->expect(Match.Result.fieldScoreForTeam(team1Won, true))->Expect.toBe(1.0)
   })
 
-  test("team2 gets 1.0 when Team1Won", t => {
-    t->expect(Match.Result.fieldScoreForTeam(team1Won, false))->Expect.toBe(1.0)
+  test("team2 gets 0.0 when Team1Won", t => {
+    t->expect(Match.Result.fieldScoreForTeam(team1Won, false))->Expect.toBe(0.0)
   })
 
   let team2Won = {
@@ -41,12 +41,12 @@ describe("Result.fieldScoreForTeam", () => {
     winner: Some(Match.Result.Team2Won),
   }
 
-  test("team1 gets 1.0 when Team2Won", t => {
-    t->expect(Match.Result.fieldScoreForTeam(team2Won, true))->Expect.toBe(1.0)
+  test("team1 gets 0.0 when Team2Won", t => {
+    t->expect(Match.Result.fieldScoreForTeam(team2Won, true))->Expect.toBe(0.0)
   })
 
-  test("team2 gets 3.0 when Team2Won", t => {
-    t->expect(Match.Result.fieldScoreForTeam(team2Won, false))->Expect.toBe(3.0)
+  test("team2 gets 1.0 when Team2Won", t => {
+    t->expect(Match.Result.fieldScoreForTeam(team2Won, false))->Expect.toBe(1.0)
   })
 
   let draw = {
@@ -55,9 +55,9 @@ describe("Result.fieldScoreForTeam", () => {
     winner: None,
   }
 
-  test("both teams get 2.0 on draw", t => {
-    t->expect(Match.Result.fieldScoreForTeam(draw, true))->Expect.toBe(2.0)
-    t->expect(Match.Result.fieldScoreForTeam(draw, false))->Expect.toBe(2.0)
+  test("both teams get 0.5 on draw", t => {
+    t->expect(Match.Result.fieldScoreForTeam(draw, true))->Expect.toBe(0.5)
+    t->expect(Match.Result.fieldScoreForTeam(draw, false))->Expect.toBe(0.5)
   })
 })
 
@@ -103,7 +103,7 @@ test("Result.toString returns correct strings", t => {
 test("manualPair creates match with unset result", t => {
   let team1 = TestData.tNanshan
   let team2 = TestData.tLeiting
-  let m = Match.manualPair(~team1, ~team2)
+  let m = Match.manualPair(~team1, ~team2, ~timeLimitMinutes=None)
   t->expect(m.team1Id)->Expect.toBe(team1.id)
   t->expect(m.team2Id)->Expect.toBe(team2.id)
   t->expect(m.result.winner)->Expect.toBe(None)
@@ -111,15 +111,15 @@ test("manualPair creates match with unset result", t => {
 })
 
 test("isBye returns true only when team is bye", t => {
-  let normalMatch = Match.manualPair(~team1=TestData.tNanshan, ~team2=TestData.tLeiting)
+  let normalMatch = Match.manualPair(~team1=TestData.tNanshan, ~team2=TestData.tLeiting, ~timeLimitMinutes=None)
   t->expect(Match.isBye(normalMatch))->Expect.toBe(false)
 
-  let byeMatch = Match.manualPair(~team1=TestData.tNanshan, ~team2=Team.bye)
+  let byeMatch = Match.manualPair(~team1=TestData.tNanshan, ~team2=Team.bye, ~timeLimitMinutes=None)
   t->expect(Match.isBye(byeMatch))->Expect.toBe(true)
 })
 
 test("getOpponentId returns correct opponent", t => {
-  let m = Match.manualPair(~team1=TestData.tNanshan, ~team2=TestData.tFengyun)
+  let m = Match.manualPair(~team1=TestData.tNanshan, ~team2=TestData.tFengyun, ~timeLimitMinutes=None)
   t->expect(Match.getOpponentId(m, TestData.tNanshan.id))->Expect.toBe(TestData.tFengyun.id)
   t->expect(Match.getOpponentId(m, TestData.tFengyun.id))->Expect.toBe(TestData.tNanshan.id)
 })
@@ -131,6 +131,7 @@ test("Match encode/decode roundtrip", t => {
     team2Id: TestData.tLeiting.id,
     result: {Match.Result.team1Level: Level.King, team2Level: Level.Eight, winner: Some(Match.Result.Team1Won)},
     tableNumber: Some(1),
+    timeLimitMinutes: Some(70),
   }
   let decoded = m->Match.encode->Match.decode
   t->expect(decoded.team1Id)->Expect.toBe(TestData.tNanshan.id)

@@ -3,9 +3,8 @@
   Modified for 掼蛋 tournament management.
 
   队伍配对引擎（瑞士移位制）。
-  去掉颜色平衡，维度: 避免已对阵 > 场分相近 > 上下半区交叉
+  去掉颜色平衡，维度: 避免已对阵 > 避免同俱乐部 > 场分相近 > 上下半区交叉
 */
-open! Belt
 module Id = Data_Id
 
 @deriving(accessors)
@@ -29,25 +28,25 @@ let descendingScore = Utils.descend(compare, x => x.score, ...)
 
 let splitInHalf = arr => {
   let midpoint = try {
-    Array.size(arr) / 2
+    Array.length(arr) / 2
   } catch {
   | Division_by_zero => 0
   }
-  (Array.slice(arr, ~offset=0, ~len=midpoint), Array.sliceToEnd(arr, midpoint))
+  (Array.slice(arr, ~start=0, ~end=midpoint), Array.sliceToEnd(arr, ~start=midpoint))
 }
 
 /*
  确定每支队伍所属半区及半区内排名位置。
  */
 let setUpperHalves = data => {
-  let dataArr = Map.valuesToArray(data)
-  Map.map(data, teamData => {
+  let dataArr = Id.Map.valuesToArray(data)
+  Id.Map.map(data, teamData => {
     let (upperHalfIds, lowerHalfIds) =
       dataArr
-      ->Array.keep(({score, _}) => score == teamData.score)
-      ->Belt.SortArray.stableSortBy(descendingScore)
+      ->Array.filter(({score, _}) => score == teamData.score)
+      ->Utils.Array.toSortedByInt(descendingScore)
       ->splitInHalf
-    let getIndex = Array.getIndexBy(_, x => Id.eq(x.id, teamData.id))
+    let getIndex = Array.findIndexOpt(_, x => Id.eq(x.id, teamData.id))
     let (halfPos, isUpperHalf) = switch (getIndex(upperHalfIds), getIndex(lowerHalfIds)) {
     | (Some(index), Some(_))
     | (Some(index), None) => (index, true)
@@ -70,18 +69,48 @@ let priority = (~isDiffHalf, ~halfPosDiff, ~scoreDiff, ~canMeet, ~maxScore) => {
 
 let calcMaxPriority = priority(~isDiffHalf=true, ~halfPosDiff=0., ~scoreDiff=0., ~canMeet=true, ...)
 
-let calcMaxScore = m => Map.reduce(m, 0., (acc, _, p) => max(acc, p.score))
+let calcMaxScore = m => Id.Map.reduce(m, 0., (acc, _, p) => max(acc, p.score))
 
-let make = (scoreData, teamData, avoidPairs) => {
+let make = (scoreData, teamData, avoidPairs, ~avoidClubs=false) => {
   let avoidMap = Data_Id.Pair.Set.toMap(avoidPairs)
-  let teams = Map.mapWithKey(teamData, (key, data: Data_Team.t) => {
-    let teamStats = switch Map.get(scoreData, key) {
+  /* Build a club->teamId index for club avoidance */
+  let clubTeams: Js.Dict.t<list<Id.t>> = if avoidClubs {
+    let dict = Js.Dict.empty()
+    let allTeams = Id.Map.toArray(teamData)
+    Array.forEach(allTeams, ((_, team: Data_Team.t)) => {
+      if team.club != "" {
+        switch Js.Dict.get(dict, team.club) {
+        | Some(ids) => Js.Dict.set(dict, team.club, list{team.id, ...ids})
+        | None => Js.Dict.set(dict, team.club, list{team.id})
+        }
+      }
+    })
+    dict
+  } else {
+    Js.Dict.empty()
+  }
+  let clubMates = id => {
+    if !avoidClubs {
+      Id.Set.make()
+    } else {
+      switch Id.Map.get(teamData, id) {
+      | Some(team) if team.club != "" =>
+        switch Js.Dict.get(clubTeams, team.club) {
+        | Some(mates) => mates->List.filter(mateId => !Id.eq(mateId, id))->List.toArray->Id.Set.fromArray
+        | None => Id.Set.make()
+        }
+      | _ => Id.Set.make()
+      }
+    }
+  }
+  let teams = Id.Map.mapWithKey(teamData, (key, data: Data_Team.t) => {
+    let teamStats = switch Id.Map.get(scoreData, key) {
     | None => Data_Scoring.make(key)
     | Some(x) => x
     }
-    let newAvoidIds = switch Map.get(avoidMap, key) {
-    | None => Set.make(~id=Data_Id.id)
-    | Some(x) => x
+    let newAvoidIds = switch Id.Map.get(avoidMap, key) {
+    | None => clubMates(key)
+    | Some(x) => Id.Set.union(x, clubMates(key))
     }
     {
       avoidIds: newAvoidIds,
@@ -97,7 +126,7 @@ let make = (scoreData, teamData, avoidPairs) => {
 }
 
 let keep = ({teams, _}, ~f) => {
-  let teams = Map.keep(teams, (key, team) => f(key, team))
+  let teams = Id.Map.keep(teams, (key, team) => f(key, team))
   let maxScore = calcMaxScore(teams)
   {teams, maxScore, maxPriority: calcMaxPriority(~maxScore)}
 }
@@ -107,7 +136,7 @@ let calcPairIdeal = (team1, team2, ~maxScore) =>
     0.0
   } else {
     let metBefore = List.some(team1.opponents, Id.eq(team2.id, ...))
-    let mustAvoid = Set.has(team1.avoidIds, team2.id)
+    let mustAvoid = Id.Set.has(team1.avoidIds, team2.id)
     let canMeet = !metBefore && !mustAvoid
     let scoreDiff = abs_float(team1.score -. team2.score)
     let halfPosDiff = Float.fromInt(abs(team1.halfPos - team2.halfPos))
@@ -116,7 +145,7 @@ let calcPairIdeal = (team1, team2, ~maxScore) =>
   }
 
 let calcPairIdealByIds = ({teams, maxScore, _}, t1, t2) =>
-  switch (Map.get(teams, t1), Map.get(teams, t2)) {
+  switch (Id.Map.get(teams, t1), Id.Map.get(teams, t2)) {
   | (Some(t1), Some(t2)) => Some(calcPairIdeal(t1, t2, ~maxScore))
   | _ => None
   }
@@ -125,21 +154,21 @@ let sortByScore = (data1, data2) => compare(data1.score, data2.score)
 
 let setByeTeam = (byeQueue, teamByeId, data: t) => {
   let hasNotHadBye = p => !List.some(p.opponents, Id.eq(teamByeId, ...))
-  switch mod(Map.size(data.teams), 2) {
+  switch mod(Id.Map.size(data.teams), 2) {
   | exception Division_by_zero => (data, None)
   | 0 => (data, None)
   | _ =>
     let dataArr =
       data.teams
-      ->Map.valuesToArray
-      ->Array.keep(hasNotHadBye)
-      ->SortArray.stableSortBy(sortByScore)
+      ->Id.Map.valuesToArray
+      ->Array.filter(hasNotHadBye)
+      ->Utils.Array.toSortedByInt(sortByScore)
     let teamIdsWithoutByes = Array.map(dataArr, p => p.id)
     let hasntHadByeFn = id => Array.some(teamIdsWithoutByes, Id.eq(id, ...))
-    let nextByeSignups = Array.keep(byeQueue, hasntHadByeFn)
+    let nextByeSignups = Array.filter(byeQueue, hasntHadByeFn)
     let dataForNextBye = switch nextByeSignups[0] {
     | Some(id) =>
-      switch Map.get(data.teams, id) {
+      switch Id.Map.get(data.teams, id) {
       | Some(_) as x => x
       | None => dataArr[0]
       }
@@ -147,11 +176,11 @@ let setByeTeam = (byeQueue, teamByeId, data: t) => {
       switch dataArr[0] {
       | Some(_) as x => x
       | None =>
-        data.teams->Map.valuesToArray->SortArray.stableSortBy(sortByScore)->Array.get(0)
+        data.teams->Id.Map.valuesToArray->Utils.Array.toSortedByInt(sortByScore)->Array.get(0)
       }
     }
     let teams = switch dataForNextBye {
-    | Some(dataForNextBye) => Map.remove(data.teams, dataForNextBye.id)
+    | Some(dataForNextBye) => Id.Map.remove(data.teams, dataForNextBye.id)
     | None => data.teams
     }
     ({...data, teams}, dataForNextBye)
@@ -165,27 +194,27 @@ let sortByNetScore = (pair1, pair2) => compare(netScore(pair2), netScore(pair1))
 module IdMatch = unpack(Blossom.Match.comparable(Id.compare))
 
 let pairTeams = ({teams, maxScore, _}) => {
-  Map.reduce(teams, list{}, (acc, t1Id, t1) =>
-    Map.reduce(teams, acc, (acc2, t2Id, t2) => list{
+  Id.Map.reduce(teams, list{}, (acc, t1Id, t1) =>
+    Id.Map.reduce(teams, acc, (acc2, t2Id, t2) => list{
       (t1Id, t2Id, calcPairIdeal(t1, t2, ~maxScore)),
       ...acc2,
     })
   )
   ->Blossom.Match.make(~id=module(IdMatch))
-  ->Blossom.Match.reduce(~init=Set.make(~id=Data_Id.Pair.id), ~f=(acc, p1, p2) =>
+  ->Blossom.Match.reduce(~init=Data_Id.Pair.Set.make(), ~f=(acc, p1, p2) =>
     switch Data_Id.Pair.make(p1, p2) {
     | None => acc
-    | Some(pair) => Set.add(acc, pair)
+    | Some(pair) => Belt.Set.add(acc, pair)
     }
   )
-  ->Set.toArray
-  ->Array.keepMap(pair => {
+  ->Data_Id.Pair.Set.toArray
+  ->Array.filterMap(pair => {
     let (t1, t2) = Data_Id.Pair.toTuple(pair)
-    switch (Map.get(teams, t1), Map.get(teams, t2)) {
+    switch (Id.Map.get(teams, t1), Id.Map.get(teams, t2)) {
     | (Some(t1), Some(t2)) => Some((t1, t2))
     | _ => None
     }
   })
-  ->SortArray.stableSortBy(sortByNetScore)
+  ->Utils.Array.toSortedByInt(sortByNetScore)
   ->Array.map(((t1, t2)) => (t1.id, t2.id))
 }

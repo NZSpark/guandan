@@ -14,10 +14,14 @@ module FieldScore: {
 type t = {
   id: Data_Id.t,
   teamId: Data_Id.t,
-  /** 各局场分（3.0/2.0/1.0） */
+  /** 各局场分（1.0/0.5/0.0/-1.0） */
   results: list<float>,
   /** 总场分 */
   totalFieldScore: float,
+  /** 对手分（Buchholz） */
+  opponentScore: float,
+  /** 胜场数 */
+  wins: int,
   /** 总净积小分 */
   totalNetSmallScore: int,
   /** 总累积小分 */
@@ -46,6 +50,8 @@ module TieBreak: {
   type t =
     | TotalFieldScore
     | DirectEncounter
+    | OpponentScore
+    | Wins
     | NetSmallScore
     | CumulativeSmallScore
 
@@ -55,11 +61,15 @@ module TieBreak: {
   let toPrettyString: t => string
 }
 
+let swissTieBreaks: array<TieBreak.t>
+let groupTieBreaks: array<TieBreak.t>
 let defaultTieBreaks: array<TieBreak.t>
 
 type teamScores = {
   id: Data_Id.t,
   fieldScore: float,
+  opponentScore: float,
+  wins: int,
   netSmallScore: int,
   cumulativeSmallScore: int,
 }

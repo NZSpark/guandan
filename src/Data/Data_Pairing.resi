@@ -14,7 +14,7 @@ let teams: t => Data_Id.Map.t<team>
 
 let maxPriority: t => float
 
-let make: (Data_Id.Map.t<Data_Scoring.t>, Data_Id.Map.t<Data_Team.t>, Data_Id.Pair.Set.t) => t
+let make: (Data_Id.Map.t<Data_Scoring.t>, Data_Id.Map.t<Data_Team.t>, Data_Id.Pair.Set.t, ~avoidClubs: bool=?) => t
 
 let keep: (t, ~f: (Data_Id.t, team) => bool) => t
 

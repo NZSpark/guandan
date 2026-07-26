@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0.
 */
-open! Belt
 open Data
 module Id = Data.Id
 
@@ -58,7 +57,7 @@ let make = (
     | _ => ()
     }
 
-  let teamList = teams->Map.valuesToArray->Array.map(t => makeCard(~team=t, ~getPlayer))
+  let teamList = teams->Id.Map.valuesToArray->Array.map(t => makeCard(~team=t, ~getPlayer))
 
   let teamButtons = teamList->Array.map(card => {
     let isSelected = switch (team1Selected, team2Selected) {

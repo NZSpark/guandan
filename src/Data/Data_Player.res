@@ -6,8 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-module Option = Belt.Option
-
 type t = {
   firstName: string,
   id: Data_Id.t,
@@ -40,16 +38,16 @@ let decode = json => {
     id: d->Option.flatMap(d => Js.Dict.get(d, "id"))->Option.getExn->Data_Id.decode,
     firstName: d
     ->Option.flatMap(d => Js.Dict.get(d, "firstName"))
-    ->Option.flatMap(Js.Json.decodeString)
+    ->Option.flatMap(x => Js.Json.decodeString(x))
     ->Option.getExn,
     lastName: d
     ->Option.flatMap(d => Js.Dict.get(d, "lastName"))
-    ->Option.flatMap(Js.Json.decodeString)
+    ->Option.flatMap(x => Js.Json.decodeString(x))
     ->Option.getExn,
     gender: d
     ->Option.flatMap(d => Js.Dict.get(d, "gender"))
-    ->Option.flatMap(Js.Json.decodeString)
-    ->Option.getWithDefault(""),
+    ->Option.flatMap(x => Js.Json.decodeString(x))
+    ->Option.getOr(""),
   }
 }
 
@@ -65,5 +63,5 @@ let getMaybe = (playerMap, id) =>
   if Data_Id.eq(id, Data_Id.noPlayer) {
     {id: Data_Id.noPlayer, firstName: "[轮空]", lastName: "", gender: ""}
   } else {
-    Belt.Map.getWithDefault(playerMap, id, {id, firstName: "未知", lastName: "选手", gender: ""})
+    playerMap->Data_Id.Map.get(id)->Option.getOr({id, firstName: "未知", lastName: "选手", gender: ""})
   }

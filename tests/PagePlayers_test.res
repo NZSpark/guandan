@@ -10,7 +10,6 @@ open Vitest
 open JestDom
 open ReactTestingLibrary
 
-open! Belt
 
 module TestPlayersPage = {
   @react.component

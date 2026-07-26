@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 
 module Format = {
   type t =
@@ -55,6 +54,12 @@ type t = {
   byeQueue: array<Data_Id.t>,
   tieBreaks: array<Data_Scoring.TieBreak.t>,
   roundList: Data_Rounds.t,
+  /** 瑞士制轮数（可配置），None 时按 log2(n) 自动计算 */
+  swissRounds: option<int>,
+  /** 默认比赛时间限制（分钟）。海选/小组赛70，淘汰赛/决赛120 */
+  timeLimitMinutes: option<int>,
+  /** 小组赛使用随机抽签（按积分分档后档内随机）而非蛇形分组 */
+  groupRandomDraw: bool,
 }
 
 let make = (~id, ~name) => {
@@ -63,9 +68,12 @@ let make = (~id, ~name) => {
   format: Format.default,
   byeQueue: [],
   date: Js.Date.make(),
-  teamIds: Set.make(~id=Data_Id.id),
+  teamIds: Data_Id.Set.make(),
   roundList: Data_Rounds.empty,
   tieBreaks: Data_Scoring.defaultTieBreaks,
+  swissRounds: None,
+  timeLimitMinutes: None,
+  groupRandomDraw: false,
 }
 
 /**
@@ -79,37 +87,45 @@ let decode = json => {
   let d = Js.Json.decodeObject(json)->Option.getExn
   {
     id: d->Js.Dict.get("id")->Option.getExn->Data_Id.decode,
-    name: d->Js.Dict.get("name")->Option.flatMap(Js.Json.decodeString)->Option.getExn,
+    name: Option.getExn(Option.flatMap(d->Js.Dict.get("name"), x => Js.Json.decodeString(x))),
     format: d
     ->Js.Dict.get("format")
     ->Option.map(Format.decode)
-    ->Option.getWithDefault(Format.default),
-    date: d
+    ->Option.getOr(Format.default),
+    date: Option.getExn(d
     ->Js.Dict.get("date")
     ->Option.map(json =>
       switch Js.Json.decodeString(json) {
       | Some(s) => Js.Date.fromString(s)
       | None => unsafe_date(json)
       }
-    )
-    ->Option.getExn,
-    teamIds: d
+    )),
+    teamIds: Option.getExn(d
     ->Js.Dict.get("teamIds")
-    ->Option.flatMap(Js.Json.decodeArray)
-    ->Option.getExn
+    ->Option.flatMap(x => Js.Json.decodeArray(x)))
     ->Array.map(Data_Id.decode)
-    ->Set.fromArray(~id=Data_Id.id),
-    byeQueue: d
+    ->Data_Id.Set.fromArray,
+    byeQueue: Option.getExn(d
     ->Js.Dict.get("byeQueue")
-    ->Option.flatMap(Js.Json.decodeArray)
-    ->Option.getExn
+    ->Option.flatMap(x => Js.Json.decodeArray(x)))
     ->Array.map(Data_Id.decode),
-    tieBreaks: d
+    tieBreaks: Option.getExn(d
     ->Js.Dict.get("tieBreaks")
-    ->Option.flatMap(Js.Json.decodeArray)
-    ->Option.getExn
+    ->Option.flatMap(x => Js.Json.decodeArray(x)))
     ->Array.map(Data_Scoring.TieBreak.decode),
     roundList: d->Js.Dict.get("roundList")->Option.getExn->Data_Rounds.decode,
+    swissRounds: d
+    ->Js.Dict.get("swissRounds")
+    ->Option.flatMap(x => Js.Json.decodeNumber(x))
+    ->Option.map(Float.toInt),
+    timeLimitMinutes: d
+    ->Js.Dict.get("timeLimitMinutes")
+    ->Option.flatMap(x => Js.Json.decodeNumber(x))
+    ->Option.map(Float.toInt),
+    groupRandomDraw: switch d->Js.Dict.get("groupRandomDraw") {
+    | Some(v) => Js.Json.decodeBoolean(v)->Option.getOr(false)
+    | None => false
+    },
   }
 }
 
@@ -119,8 +135,21 @@ let encode = data =>
     ("name", data.name->Js.Json.string),
     ("format", data.format->Format.encode),
     ("date", data.date->Js.Date.toJSONUnsafe->Js.Json.string),
-    ("teamIds", data.teamIds->Set.toArray->Array.map(Data_Id.encode)->Js.Json.array),
+    ("teamIds", data.teamIds->Data_Id.Set.toArray->Array.map(Data_Id.encode)->Js.Json.array),
     ("byeQueue", data.byeQueue->Array.map(Data_Id.encode)->Js.Json.array),
     ("tieBreaks", data.tieBreaks->Array.map(Data_Scoring.TieBreak.encode)->Js.Json.array),
     ("roundList", data.roundList->Data_Rounds.encode),
+    ("swissRounds",
+      switch data.swissRounds {
+      | Some(n) => n->Float.fromInt->Js.Json.number
+      | None => Js.Json.null
+      }
+    ),
+    ("timeLimitMinutes",
+      switch data.timeLimitMinutes {
+      | Some(n) => n->Float.fromInt->Js.Json.number
+      | None => Js.Json.null
+      }
+    ),
+    ("groupRandomDraw", data.groupRandomDraw->Js.Json.boolean),
   ])->Js.Json.object_

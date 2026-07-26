@@ -6,10 +6,9 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-module Option = Belt.Option
-
 type t = {
   avoidTeamPairs: Data_Id.Pair.Set.t,
+  avoidClubs: bool,
   lastBackup: Js.Date.t,
 }
 
@@ -18,12 +17,16 @@ let decode = json => {
   {
     avoidTeamPairs: switch d->Js.Dict.get("avoidTeamPairs") {
     | Some(v) => Data_Id.Pair.Set.decode(v)
-    | None => Belt.Set.make(~id=Data_Id.Pair.id)
+    | None => Data_Id.Pair.Set.make()
+    },
+    avoidClubs: switch d->Js.Dict.get("avoidClubs") {
+    | Some(v) => Js.Json.decodeBoolean(v)->Option.getOr(false)
+    | None => false
     },
     lastBackup: d
     ->Js.Dict.get("lastBackup")
-    ->Option.flatMap(Js.Json.decodeString)
-    ->Option.getWithDefault("1970-01-01T00:00:00.000Z")
+    ->Option.flatMap(x => Js.Json.decodeString(x))
+    ->Option.getOr("1970-01-01T00:00:00.000Z")
     ->Js.Date.fromString,
   }
 }
@@ -31,10 +34,12 @@ let decode = json => {
 let encode = data =>
   Js.Dict.fromArray([
     ("avoidTeamPairs", data.avoidTeamPairs->Data_Id.Pair.Set.encode),
+    ("avoidClubs", data.avoidClubs->Js.Json.boolean),
     ("lastBackup", data.lastBackup->Js.Date.toJSONUnsafe->Js.Json.string),
   ])->Js.Json.object_
 
 let default = {
-  avoidTeamPairs: Belt.Set.make(~id=Data_Id.Pair.id),
+  avoidTeamPairs: Data_Id.Pair.Set.make(),
+  avoidClubs: true,
   lastBackup: Js.Date.fromFloat(0.0),
 }

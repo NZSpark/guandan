@@ -23,7 +23,7 @@ module Result: {
   /** 创建未设置的结果 */
   let makeNotSet: unit => t
 
-  /** 场分: 胜3/平2/负1 */
+  /** 场分: 胜1/平0.5/负0 (2026规则) */
   let fieldScoreForTeam: (t, bool) => float
 
   /** 胜/平/负字符串 */
@@ -36,6 +36,8 @@ type t = {
   team2Id: Data_Id.t,
   result: Result.t,
   tableNumber: option<int>,
+  /** 比赛时间限制（分钟）。海选/小组赛70分钟，淘汰赛/决赛120分钟。 */
+  timeLimitMinutes: option<int>,
 }
 
 let isBye: t => bool
@@ -45,7 +47,7 @@ let decode: Js.Json.t => t
 let encode: t => Js.Json.t
 
 /** 手动创建一场比赛 */
-let manualPair: (~team1: Data_Team.t, ~team2: Data_Team.t) => t
+let manualPair: (~team1: Data_Team.t, ~team2: Data_Team.t, ~timeLimitMinutes: option<int>) => t
 
 /** 获取某队在本场比赛中的对手ID */
 let getOpponentId: (t, Data_Id.t) => Data_Id.t

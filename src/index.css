@@ -1112,3 +1112,355 @@ li.player.missing {
   margin: 0;
   color: var(--grey-80);
 }
+
+/*******************************************************************************
+## Toast Notifications
+*******************************************************************************/
+
+.toast-container {
+  position: fixed;
+  top: 52px;
+  right: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: var(--font-body-20);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: toast-slide-in 0.3s ease-out;
+  pointer-events: auto;
+  background: var(--white-100);
+  border-left: 4px solid var(--grey-50);
+}
+
+.toast-success {
+  border-left-color: var(--green-60);
+  background: #f0fff4;
+}
+
+.toast-warning {
+  border-left-color: var(--yellow-60);
+  background: #fffff0;
+}
+
+.toast-error {
+  border-left-color: var(--red-60);
+  background: #fff5f5;
+}
+
+.toast-info {
+  border-left-color: var(--blue-60);
+  background: #f0f7ff;
+}
+
+.toast-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+.toast-success .toast-icon {
+  color: var(--green-70);
+  background: var(--green-50);
+}
+
+.toast-warning .toast-icon {
+  color: var(--yellow-80);
+  background: var(--yellow-50);
+}
+
+.toast-error .toast-icon {
+  color: var(--red-70);
+  background: var(--red-50);
+}
+
+.toast-info .toast-icon {
+  color: var(--blue-70);
+  background: var(--blue-50);
+}
+
+.toast-body {
+  flex-grow: 1;
+  color: var(--grey-90);
+  line-height: 1.4;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--grey-50);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-close:hover {
+  background: var(--grey-90-a10);
+  color: var(--grey-80);
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/*******************************************************************************
+## Empty State
+*******************************************************************************/
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  color: var(--grey-40);
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-state-title {
+  font-size: var(--font-title-20);
+  font-weight: 500;
+  color: var(--grey-70);
+  margin: 0 0 8px 0;
+}
+
+.empty-state-desc {
+  font-size: var(--font-body-20);
+  color: var(--grey-50);
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+/*******************************************************************************
+## Standings Table (Enhanced)
+*******************************************************************************/
+
+.standings-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--grey-30);
+  background: var(--white-100);
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-body-20);
+}
+
+.standings-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.standings-table th {
+  background: var(--grey-20);
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--font-body-10);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--grey-70);
+  border-bottom: 2px solid var(--grey-40);
+  white-space: nowrap;
+}
+
+.standings-col-rank {
+  width: 56px;
+  text-align: center !important;
+}
+
+.standings-col-team {
+  min-width: 140px;
+}
+
+.standings-col-players {
+  min-width: 100px;
+  color: var(--grey-60);
+  font-size: var(--font-body-10);
+}
+
+.standings-col-num {
+  width: 72px;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.standings-row td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--grey-20);
+  transition: background-color 0.15s ease;
+}
+
+.standings-row:hover td {
+  background-color: var(--blue-50-a10, rgba(10, 132, 255, 0.06));
+}
+
+/* Zebra striping via CSS — top3 rows keep their gradient */
+.standings-row:not(.standings-row-top3):nth-child(even) td {
+  background: var(--grey-10);
+}
+
+.standings-row:not(.standings-row-top3):nth-child(odd) td {
+  background: var(--white-100);
+}
+
+.standings-row-top3 {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.05) 0%, transparent 8%);
+}
+
+/* Medal badges */
+.standings-medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: var(--font-caption-20);
+  font-weight: 700;
+  color: var(--white-100);
+}
+
+.medal-gold {
+  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  box-shadow: 0 2px 4px rgba(246, 211, 101, 0.4);
+}
+
+.medal-silver {
+  background: linear-gradient(135deg, #a8c0ff 0%, #8f94fb 100%);
+  box-shadow: 0 2px 4px rgba(168, 192, 255, 0.4);
+}
+
+.medal-bronze {
+  background: linear-gradient(135deg, #f9a88b 0%, #d4805a 100%);
+  box-shadow: 0 2px 4px rgba(249, 168, 139, 0.4);
+}
+
+.standings-rank {
+  color: var(--grey-50);
+  font-size: var(--font-caption-20);
+  font-weight: 500;
+}
+
+/* Score colors */
+.score-positive {
+  color: var(--green-70);
+  font-weight: 600;
+}
+
+.score-negative {
+  color: var(--red-60);
+  font-weight: 600;
+}
+
+.score-neutral {
+  color: var(--grey-50);
+}
+
+.standings-tiebreak-info {
+  margin-top: 0.75rem;
+  padding: 8px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/*******************************************************************************
+## Form group (for setup pages)
+*******************************************************************************/
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.form-group small {
+  display: block;
+  color: var(--grey-50);
+  margin-top: 4px;
+  font-size: var(--font-caption-20);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
+  width: 100%;
+  max-width: 360px;
+}
+
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media screen and (max-width: 767px) {
+  .grid-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .standings-table {
+    font-size: var(--font-body-10);
+  }
+
+  .standings-table th,
+  .standings-table td {
+    padding: 6px 8px;
+  }
+
+  .standings-col-players {
+    display: none;
+  }
+
+  .toast-container {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+  }
+}

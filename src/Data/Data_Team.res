@@ -29,15 +29,15 @@ let bye: t = {
 }
 
 let decode = json => {
-  let d = Js.Json.decodeObject(json)->Belt.Option.getExn
+  let d = Js.Json.decodeObject(json)->Option.getExn
   {
-    id: d->Js.Dict.get("id")->Belt.Option.getExn->Id.decode,
-    name: d->Js.Dict.get("name")->Belt.Option.flatMap(Js.Json.decodeString)->Belt.Option.getWithDefault(""),
-    player1Id: d->Js.Dict.get("player1Id")->Belt.Option.flatMap(Js.Json.decodeString)->Belt.Option.map(Id.fromString)->Belt.Option.getWithDefault(Id.noPlayer),
-    player2Id: d->Js.Dict.get("player2Id")->Belt.Option.flatMap(Js.Json.decodeString)->Belt.Option.map(Id.fromString)->Belt.Option.getWithDefault(Id.noPlayer),
-    isBye: d->Js.Dict.get("isBye")->Belt.Option.flatMap(Js.Json.decodeBoolean)->Belt.Option.getWithDefault(false),
-    club: d->Js.Dict.get("club")->Belt.Option.flatMap(Js.Json.decodeString)->Belt.Option.getWithDefault(""),
-    initialScore: d->Js.Dict.get("initialScore")->Belt.Option.flatMap(Js.Json.decodeNumber)->Belt.Option.getWithDefault(0.0),
+    id: d->Js.Dict.get("id")->Option.getExn->Id.decode,
+    name: d->Js.Dict.get("name")->Option.flatMap(x => Js.Json.decodeString(x))->Option.getOr(""),
+    player1Id: d->Js.Dict.get("player1Id")->Option.flatMap(x => Js.Json.decodeString(x))->Option.map(x => Id.fromString(x))->Option.getOr(Id.noPlayer),
+    player2Id: d->Js.Dict.get("player2Id")->Option.flatMap(x => Js.Json.decodeString(x))->Option.map(x => Id.fromString(x))->Option.getOr(Id.noPlayer),
+    isBye: d->Js.Dict.get("isBye")->Option.flatMap(x => Js.Json.decodeBoolean(x))->Option.getOr(false),
+    club: d->Js.Dict.get("club")->Option.flatMap(x => Js.Json.decodeString(x))->Option.getOr(""),
+    initialScore: d->Js.Dict.get("initialScore")->Option.flatMap(x => Js.Json.decodeNumber(x))->Option.getOr(0.0),
   }
 }
 

@@ -35,6 +35,12 @@ type t = {
   byeQueue: array<Data_Id.t>,
   tieBreaks: array<Data_Scoring.TieBreak.t>,
   roundList: Data_Rounds.t,
+  /** 瑞士制轮数（可配置），None 时按 log2(n) 自动计算。小组赛/淘汰赛忽略。 */
+  swissRounds: option<int>,
+  /** 默认比赛时间限制（分钟）。海选/小组赛70，淘汰赛/决赛120。None 表示无限制。 */
+  timeLimitMinutes: option<int>,
+  /** 小组赛使用随机抽签（按积分分档后档内随机）而非蛇形分组 */
+  groupRandomDraw: bool,
 }
 
 let make: (~id: Data_Id.t, ~name: string) => t

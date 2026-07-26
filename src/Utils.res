@@ -5,7 +5,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 
 let github_url = "https://github.com/NZSpark/guandan"
 let license_url = "https://github.com/NZSpark/guandan/blob/master/LICENSE"
@@ -29,7 +28,12 @@ module Array = {
       arr
     | (None, _) | (_, None) => arr
     }
+
+  @ocaml.warning("-32")
+  let toSortedByInt = (arr, cmp) => Array.toSorted(arr, (a, b) => Ordering.fromInt(cmp(a, b)))
 }
+
+
 
 module WebpackAssets = {
   @module("../graphics/logo.svg") external logo: string = "default"
@@ -168,25 +172,3 @@ module FormHelper = {
   }
 }
 
-/* Side effects */
-
-let _ = Numeral.registerFormat(
-  "fraction",
-  Numeral.Format.make(
-    ~formatFn=(value, _format, _roundingFunction) => {
-      let whole = floor(value)
-      let remainder = value -. whole
-      let fraction = switch remainder {
-      | 0.25 => `¼`
-      | 0.5 => `½`
-      | 0.75 => `¾`
-      | _ => ""
-      }
-      let stringedWhole = whole == 0.0 && fraction != "" ? "" : Float.toString(whole)
-      stringedWhole ++ fraction
-    },
-    ~regexps=Numeral.RegExps.make(~format=%re("/(1\/2)/"), ~unformat=%re("/(1\/2)/")),
-    /* This doesn't do anything currently */
-    ~unformatFn=value => Float.fromString(value)->Option.getWithDefault(0.0),
-  ),
-)

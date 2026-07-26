@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 module D = Js.Dict
 module A = Js.Array2
 
@@ -121,7 +120,7 @@ module LocalForage: STORE = {
 
     let getItem = async ({store, decode, _}, ~key) => {
       let value = await getItem(store, Data.Id.toString(key))
-      value->Js.Nullable.toOption->Belt.Option.mapU(decode)
+      value->Js.Nullable.toOption->Option.map(decode)
     }
 
     let setItem = ({store, encode, _}, ~key, ~v) => setItem(store, Data.Id.toString(key), encode(v))
@@ -139,7 +138,7 @@ module LocalForage: STORE = {
 
     let setItems = ({store, encode, _}, ~items) =>
       items
-      ->Map.map(encode)
+      ->Data.Id.Map.map(encode)
       ->Data.Id.Map.toStringArray
       ->D.fromArray
       ->(SetItems.fromDict(store, _))
@@ -172,8 +171,8 @@ module TestStore: STORE = {
 
   module Map = {
     type t<'a> = ref<Data.Id.Map.t<'a>>
-    let make = (_, _) => ref(Map.make(~id=Data.Id.id))
-    let getItem = async (t, ~key) => t.contents->Map.get(key)
+    let make = (_, _) => ref(Data.Id.Map.make())
+    let getItem = async (t, ~key) => t.contents->Data.Id.Map.get(key)
     let setItem = async (_, ~key as _, ~v as _) => ()
     let setItems = async (_, ~items as _) => ()
     let getAllItems = async t => t.contents->Data.Id.Map.toStringArray
@@ -226,13 +225,13 @@ type state<'a> = {
 
 let genericDbReducer = (state, action) =>
   switch action {
-  | Set(id, item) => Map.set(state, id, item)
-  | Del(id) => Map.remove(state, id)
+  | Set(id, item) => Data.Id.Map.set(state, id, item)
+  | Del(id) => Data.Id.Map.remove(state, id)
   | SetAll(state) => state
   }
 
 let useAllDb = store => {
-  let (items, dispatch) = React.useReducer(genericDbReducer, Map.make(~id=Data.Id.id))
+  let (items, dispatch) = React.useReducer(genericDbReducer, Data.Id.Map.make())
   let loaded = Hooks.useBool(false)
   Hooks.useLoadingCursorUntil(loaded.state)
   React.useEffect0(() => {
@@ -240,7 +239,7 @@ let useAllDb = store => {
     Store.Map.getAllItems(store)
     ->Promise.thenResolve(results =>
       if !didCancel.contents {
-        dispatch(SetAll(results->Data.Id.Map.fromStringArray))
+        dispatch(SetAll(results->Array.map(((k, v)) => (Data.Id.fromString(k), v))->Data.Id.Map.fromArray))
         loaded.setTrue()
       }
     )
@@ -261,7 +260,7 @@ let useAllDb = store => {
       ->Store.Map.setItems(~items)
       ->Promise.then(_ => Store.Map.getKeys(store))
       ->Promise.then(keys => {
-        let deleted = Array.keep(keys, x => !Map.has(items, Data.Id.fromString(x)))
+        let deleted = Array.filter(keys, x => Option.isNone(Data.Id.Map.get(items, Data.Id.fromString(x))))
         Store.Map.removeItems(store, ~items=deleted)
       })
       ->ignore
@@ -284,8 +283,8 @@ let loadDemoDB = (_): unit => {
   let () = %raw(`document.body.style.cursor = "wait"`)
   Promise.all3((
     Store.Record.set(configDb, ~items=Data.Config.default),
-    Store.Map.setItems(players, ~items=Map.make(~id=Data.Id.id)),
-    Store.Map.setItems(tournaments, ~items=Map.make(~id=Data.Id.id)),
+    Store.Map.setItems(players, ~items=Data.Id.Map.make()),
+    Store.Map.setItems(tournaments, ~items=Data.Id.Map.make()),
   ))
   ->Promise.thenResolve(_ => Webapi.Dom.Window.alert(Webapi.Dom.window, "Aotearoa掼蛋俱乐部排位系统已初始化！"))
   ->Promise.catch(_ => {
@@ -307,6 +306,7 @@ type actionConfig =
   | DelAvoidTeamPair(Data.Id.Pair.t)
   | DelAvoidTeamSingle(Data.Id.t)
   | SetAvoidTeamPairs(Data.Id.Pair.Set.t)
+  | SetAvoidClubs(bool)
   | SetState(Data.Config.t)
   | SetLastBackup(Js.Date.t)
 
@@ -314,17 +314,18 @@ let configReducer = (state: Data.Config.t, action): Data.Config.t => {
   switch action {
   | AddAvoidTeamPair(pair) => {
       ...state,
-      avoidTeamPairs: Set.add(state.avoidTeamPairs, pair),
+      avoidTeamPairs: Belt.Set.add(state.avoidTeamPairs, pair),
     }
   | DelAvoidTeamPair(pair) => {
       ...state,
-      avoidTeamPairs: Set.remove(state.avoidTeamPairs, pair),
+      avoidTeamPairs: Belt.Set.remove(state.avoidTeamPairs, pair),
     }
   | DelAvoidTeamSingle(id) => {
       ...state,
-      avoidTeamPairs: Set.keep(state.avoidTeamPairs, pair => !Data.Id.Pair.has(pair, ~id)),
+      avoidTeamPairs: Belt.Set.keep(state.avoidTeamPairs, pair => !Data.Id.Pair.has(pair, ~id)),
     }
   | SetAvoidTeamPairs(avoidTeamPairs) => {...state, avoidTeamPairs}
+  | SetAvoidClubs(avoidClubs) => {...state, avoidClubs}
   | SetLastBackup(lastBackup) => {...state, lastBackup}
   | SetState(state) => state
   }

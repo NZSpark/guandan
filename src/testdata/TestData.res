@@ -6,7 +6,6 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 */
-open! Belt
 open Data
 module Id = Data.Id
 let id = Id.fromString
@@ -83,7 +82,7 @@ let tZuanshi: Team.t = {
 
 /* ── Player map ── */
 let players: Id.Map.t<Player.t> =
-  Map.fromArray(~id=Id.id, [
+  Id.Map.fromArray([
     (pZhangWei.id, pZhangWei), (pLiMing.id, pLiMing),
     (pWangFang.id, pWangFang), (pZhaoLi.id, pZhaoLi),
     (pLiuQiang.id, pLiuQiang), (pChenGang.id, pChenGang),
@@ -97,7 +96,7 @@ let players: Id.Map.t<Player.t> =
 
 /* ── Team map ── */
 let teams: Id.Map.t<Team.t> =
-  Map.fromArray(~id=Id.id, [
+  Id.Map.fromArray([
     (tNanshan.id, tNanshan), (tLeiting.id, tLeiting),
     (tDongqu.id, tDongqu), (tFengyun.id, tFengyun),
     (tZhongqu.id, tZhongqu), (tBeian.id, tBeian),
@@ -113,28 +112,28 @@ let matchR1_001: Match.t = {
   id: "Match_R1_001________"->id,
   team1Id: tNanshan.id, team2Id: tLeiting.id,
   result: {team1Level: Level.King, team2Level: Level.Eight, winner: Some(Match.Result.Team1Won)},
-  tableNumber: Some(1),
+  tableNumber: Some(1), timeLimitMinutes: None,
 }
 /* 风云双雄(Q=12) 胜 东区虎啸(J=11) → 场分1:3, net=-1/+1, cum=9/10 */
 let matchR1_002: Match.t = {
   id: "Match_R1_002________"->id,
   team1Id: tDongqu.id, team2Id: tFengyun.id,
   result: {team1Level: Level.Jack, team2Level: Level.Queen, winner: Some(Match.Result.Team2Won)},
-  tableNumber: Some(2),
+  tableNumber: Some(2), timeLimitMinutes: None,
 }
 /* 中区飞鹰(10) 平 北岸龙腾(10) → 场分2:2, net=0, cum=8/8 */
 let matchR1_003: Match.t = {
   id: "Match_R1_003________"->id,
   team1Id: tZhongqu.id, team2Id: tBeian.id,
   result: {team1Level: Level.Ten, team2Level: Level.Ten, winner: None},
-  tableNumber: Some(3),
+  tableNumber: Some(3), timeLimitMinutes: None,
 }
 /* 群英荟萃(A=14) 胜 钻石风暴(9) → 场分3:1, net=+5/-5, cum=13/7 */
 let matchR1_004: Match.t = {
   id: "Match_R1_004________"->id,
   team1Id: tQunying.id, team2Id: tZuanshi.id,
   result: {team1Level: Level.Ace, team2Level: Level.Nine, winner: Some(Match.Result.Team1Won)},
-  tableNumber: Some(4),
+  tableNumber: Some(4), timeLimitMinutes: None,
 }
 
 let round1: Data_Rounds.Round.t = Data_Rounds.Round.fromArray([
@@ -143,16 +142,16 @@ let round1: Data_Rounds.Round.t = Data_Rounds.Round.fromArray([
 
 /* ═══════════════════════════════════════════════════════════
    测试锦标赛：「掼蛋测试赛」
-   第1轮4场比赛，覆盖胜/平/负 + 多种等级
-   预期排名（场分 → 累积小分）：
-     1. 群英荟萃 3.0 (cum=13, Ace)
-     2. 南山闪电 3.0 (cum=11, King)
-     3. 风云双雄 3.0 (cum=10, Queen)
-     4. 中区飞鹰 2.0 (cum=8, Ten)
-     5. 北岸龙腾 2.0 (cum=8, Ten, draw vs 中区)
-     6. 东区虎啸 1.0 (cum=9, Jack)
-     7. 钻石风暴 1.0 (cum=7, Nine)
-     8. 雷霆战队 1.0 (cum=6, Eight)
+  第1轮4场比赛，覆盖胜/平/负 + 多种等级
+  预期排名（场分 → 累积小分）：
+    1. 群英荟萃 1.0 (cum=13, Ace, wins=1)
+    2. 南山闪电 1.0 (cum=11, King, wins=1)
+    3. 风云双雄 1.0 (cum=10, Queen, wins=1)
+    4. 中区飞鹰 0.5 (cum=8, Ten)
+    5. 北岸龙腾 0.5 (cum=8, Ten, draw vs 中区)
+    6. 东区虎啸 0.0 (cum=9, Jack)
+    7. 钻石风暴 0.0 (cum=7, Nine)
+    8. 雷霆战队 0.0 (cum=6, Eight)
    ═══════════════════════════════════════════════════════════ */
 
 let testTournament: Tournament.t = {
@@ -160,16 +159,19 @@ let testTournament: Tournament.t = {
   name: "掼蛋测试赛",
   format: Tournament.Format.default,
   date: Js.Date.fromString("2026-01-01T00:00:00.000Z"),
-  teamIds: Set.fromArray(~id=Id.id, [
+  teamIds: Id.Set.fromArray([
     tNanshan.id, tLeiting.id, tDongqu.id, tFengyun.id,
     tZhongqu.id, tBeian.id, tQunying.id, tZuanshi.id,
   ]),
   byeQueue: [],
   tieBreaks: Scoring.defaultTieBreaks,
   roundList: Data_Rounds.fromArray([round1]),
+  swissRounds: None,
+  timeLimitMinutes: Some(70),
+  groupRandomDraw: false,
 }
 
 /* ── Config ── */
 let config = Config.default
 let tournaments: Id.Map.t<Tournament.t> =
-  Map.fromArray(~id=Id.id, [(testTournament.id, testTournament)])
+  Id.Map.fromArray([(testTournament.id, testTournament)])

@@ -21,6 +21,8 @@ module Array: {
   type t<'a> = array<'a>
 
   let swap: (t<'a>, int, int) => t<'a>
+  @ocaml.warning("-32")
+  let toSortedByInt: (t<'a>, ('a, 'a) => int) => t<'a>
 }
 
 module WebpackAssets: {

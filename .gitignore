@@ -41,3 +41,4 @@ _esy/
 
 # Local Netlify folder
 .netlify
+/docs

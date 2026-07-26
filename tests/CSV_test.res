@@ -2,7 +2,6 @@
   Copyright (c) 2022 John Jackson.
   CSV import tests for 掼蛋 tournament management.
 */
-open! Belt
 open Vitest
 
 /* Helper: a minimal CSV snippet matching the attendance.csv format */
@@ -44,16 +43,16 @@ test("Data_CSV.parse handles empty club field", t => {
 
 test("Data_CSV.importData creates players and teams", t => {
   let (players, teams) = Data_CSV.importData(sampleCSV)
-  t->expect(Map.size(players))->Expect.toBe(6)
-  t->expect(Map.size(teams))->Expect.toBe(3)
+  t->expect(Belt.Map.size(players))->Expect.toBe(6)
+  t->expect(Belt.Map.size(teams))->Expect.toBe(3)
 })
 
 test("Data_CSV.importData stores full name in firstName", t => {
   let csv = "队伍名称,队员1,性别,队员2,性别,所属俱乐部/社团,当前积分\n测试,张伟,男,李明,男,,0\n"
   let (players, _teams) = Data_CSV.importData(csv)
-  let names: array<string> = Map.valuesToArray(players)
+  let names: array<string> = Belt.Map.valuesToArray(players)
     ->Array.map(p => p.firstName)
-    ->SortArray.stableSortBy((a, b) => compare(a, b))
+    ->Belt.SortArray.stableSortBy((a, b) => compare(a, b))
   /* Map iteration order is nondeterministic, check sorted names */
   t->expect(names[0]->Option.getExn)->Expect.toBe("张伟")
   t->expect(names[1]->Option.getExn)->Expect.toBe("李明")
@@ -74,9 +73,9 @@ test("Data_CSV.parse ignores empty trailing line", t => {
 
 test("Data_CSV.importData assigns club to teams", t => {
   let (_players, teams) = Data_CSV.importData(sampleCSV)
-  let allClubs: array<string> = Map.valuesToArray(teams)
+  let allClubs: array<string> = Belt.Map.valuesToArray(teams)
     ->Array.map(t => t.club)
-    ->SortArray.stableSortBy((a, b) => compare(a, b))
+    ->Belt.SortArray.stableSortBy((a, b) => compare(a, b))
   /* Check all 3 clubs are present (order: "" < "南山掼蛋俱乐部" < "奥克兰掼协" in UTF-8) */
   t->expect(allClubs[0]->Option.getExn)->Expect.toBe("")
   t->expect(allClubs[1]->Option.getExn)->Expect.toBe("南山掼蛋俱乐部")

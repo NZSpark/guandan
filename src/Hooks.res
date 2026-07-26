@@ -56,7 +56,7 @@ let sortedTableReducer = (state, action) => {
   | GetFloat(f) => direction(compare, f, ...)
   | GetDate(f) => direction(compare, date => f(date)->Js.Date.getTime, ...)
   }
-  let table = Belt.SortArray.stableSortBy(newState.table, sortFunc)
+  let table = Utils.Array.toSortedByInt(newState.table, sortFunc)
   {...newState, table}
 }
 
