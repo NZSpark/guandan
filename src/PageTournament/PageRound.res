@@ -158,51 +158,14 @@ let make = (
     }
   }
 
-  let getTeamDisplay = (teamId: Id.t): string =>
-    if Id.isTeamBye(teamId) {
-      "[轮空]"
-    } else {
-      switch getTeam(teamId) {
-      | Some(t) => {
-          let p1 = getPlayer(t.player1Id)
-          let p2 = getPlayer(t.player2Id)
-          t.name ++ " (" ++ p1.firstName ++ "/" ++ p2.firstName ++ ")"
-        }
-      | None => "未知队伍"
-      }
-    }
-
   let matchList = switch currRound {
   | Some(r) => Rounds.Round.toArray(r)
   | None => []
   }
 
   let matchCards = matchList->Array.mapWithIndex((m, _i) => {
-    let t1Name = getTeamDisplay(m.team1Id)
-    let t2Name = getTeamDisplay(m.team2Id)
-    let resultStr = switch m.result.winner {
-    | Some(Match.Result.Team1Won) => " — 队伍1胜"
-    | Some(Match.Result.Team2Won) => " — 队伍2胜"
-    | None => ""
-    }
-    <div key={Id.toString(m.id)} className="card" style={marginBottom: "0.5rem"}>
-      <div className="card-body">
-        <div style={display: "flex", justifyContent: "space-between", alignItems: "center"}>
-          <div>
-            <strong> {React.string(t1Name)} </strong>
-            {" vs "->React.string}
-            <strong> {React.string(t2Name)} </strong>
-            {React.string(resultStr)}
-          </div>
-          <button
-            className="button-micro button-danger"
-            onClick={_ => handleRemoveMatch(m.id)}
-            title="取消对阵">
-            {React.string("✕")}
-          </button>
-        </div>
-      </div>
-    </div>
+    let card = MatchCard.fromMatch(m, getTeam, getPlayer)
+    <MatchCard key={Id.toString(m.id)} match=card onRemove={() => handleRemoveMatch(m.id)} />
   })->React.array
 
   let formatDescription = switch format {
@@ -212,36 +175,39 @@ let make = (
   }
 
   <>
-    <div className="grid-2col">
-      <div>
+    <div className="round-layout">
+      <div className="round-matches">
         <h2> {React.string("第 " ++ Int.toString(roundId + 1) ++ " 轮对阵")} </h2>
-        <small> {formatDescription} </small>
-        {matchCards}
+        <small className="caption-20"> {formatDescription} </small>
+        <div className="match-card-list">
+          {matchCards}
+        </div>
         {if Array.length(matchList) == 0 {
-          <p> {React.string("暂无对阵。请自动配对或手动添加。")} </p>
+          <EmptyState icon=EmptyState.Clipboard title="暂无对阵" description="请自动配对或手动添加对阵。" />
         } else {
           React.null
         }}
       </div>
-      <div>
+      <div className="round-unmatched">
         <h3> {React.string("未配对队伍")} </h3>
-        <p> {React.string("剩余 " ++ Int.toString(Id.Map.size(unmatched)) ++ " 支队伍")} </p>
-        {unmatched->Id.Map.valuesToArray->Array.map(t =>
-          <div key={Id.toString(t.id)} className="card" style={marginBottom: "0.25rem"}>
-            <div className="card-body">
+        <p className="caption-20">
+          {React.string("剩余 " ++ Int.toString(Id.Map.size(unmatched)) ++ " 支队伍")}
+        </p>
+        <div className="unmatched-list">
+          {unmatched->Id.Map.valuesToArray->Array.map(t =>
+            <div key={Id.toString(t.id)} className="unmatched-team-card">
               <strong> {React.string(t.name)} </strong>
             </div>
-          </div>
-        )->React.array}
+          )->React.array}
+        </div>
       </div>
     </div>
-    <div style={marginTop: "1rem"}>
+    <div className="round-actions">
       {let isKnockout = switch format {
       | Tournament.Format.Knockout(_) => true
       | Tournament.Format.Swiss | Tournament.Format.GroupStage(_) => false
       }
       if isKnockout && Rounds.size(roundList) > 0 {
-        /* 淘汰赛已生成首轮后，显示"生成下一轮"按钮 */
         if !data.isItOver && data.isNewRoundReady {
           <button className="button button-primary" onClick={_ => handleKnockoutNextRound()}>
             {React.string("从胜者生成下一轮淘汰对阵")}
@@ -251,11 +217,13 @@ let make = (
         }
       } else {
         <button className="button button-primary" onClick={_ => handleAutoPair()}>
-          {React.string("自动配对未匹配队伍")}
+          <Icons.Repeat />
+          {React.string(" 自动配对未匹配队伍")}
         </button>
       }}
       <button className="button" onClick={_ => setShowPairPicker(_ => true)} style={marginLeft: "0.5rem"}>
-        {React.string("手动添加对阵")}
+        <Icons.Plus />
+        {React.string(" 手动添加对阵")}
       </button>
     </div>
     {if showPairPicker {
@@ -263,7 +231,7 @@ let make = (
       let availableTeams = Id.Map.keep(unmatchedWithBye, (id, _) =>
         !Id.Set.has(pairedIds, id) || Id.isTeamBye(id)
       )
-      <div style={marginTop: "1rem"}>
+      <div className="round-pair-picker">
         <PairPicker
           teams=availableTeams
           getPlayer

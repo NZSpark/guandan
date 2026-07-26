@@ -15,20 +15,6 @@ let make = (~data: LoadTournament.t, ~roundId: int) => {
   let {roundList, _} = tourney
   let round = Rounds.get(roundList, roundId)
 
-  let getTeamName = (teamId: Id.t): string =>
-    if Id.isTeamBye(teamId) {
-      "[轮空]"
-    } else {
-      switch getTeam(teamId) {
-      | Some(t) => {
-          let p1 = getPlayer(t.player1Id)
-          let p2 = getPlayer(t.player2Id)
-          t.name ++ " (" ++ p1.firstName ++ "/" ++ p2.firstName ++ ")"
-        }
-      | None => "未知队伍"
-      }
-    }
-
   let handleSetResult = (matchId: Id.t, team1Level: Data_Level.t, team2Level: Data_Level.t) => {
     switch round {
     | Some(r) =>
@@ -64,80 +50,65 @@ let make = (~data: LoadTournament.t, ~roundId: int) => {
   | None => []
   }
 
+  let completedCount = matchList->Array.filter(m =>
+    switch m.result.winner {
+    | Some(_) => true
+    | None => Data_Level.toInt(m.result.team1Level) != 2 || Data_Level.toInt(m.result.team2Level) != 2
+    }
+  )->Array.length
+
   <>
     <h2> {React.string("第 " ++ Int.toString(roundId + 1) ++ " 轮 比赛结果录入")} </h2>
-    {if Array.length(matchList) == 0 {
-      <p> {React.string("本轮暂无比赛。")} </p>
+    {if Array.length(matchList) > 0 {
+      <p className="caption-20">
+        {React.string("已录入 " ++ Int.toString(completedCount) ++ " / " ++ Int.toString(Array.length(matchList)) ++ " 场比赛")}
+      </p>
     } else {
-      matchList->Array.mapWithIndex((m, _) => {
-        let team1Name = getTeamName(m.team1Id)
-        let team2Name = getTeamName(m.team2Id)
-        let isByeMatch = Match.isBye(m)
-        let currentScore = switch m.result.winner {
-        | Some(Match.Result.Team1Won) =>
-          let diff = Data_Level.levelDiff(m.result.team1Level, m.result.team2Level)
-          team1Name ++ " 胜 (级差 +" ++ Int.toString(diff) ++ ")"
-        | Some(Match.Result.Team2Won) =>
-          let diff = Data_Level.levelDiff(m.result.team2Level, m.result.team1Level)
-          team2Name ++ " 胜 (级差 +" ++ Int.toString(diff) ++ ")"
-        | None =>
-          let l1 = Data_Level.toString(m.result.team1Level)
-          let l2 = Data_Level.toString(m.result.team2Level)
-          if l1 == "2" && l2 == "2" {
-            "未录入"
-          } else {
-            "平级 " ++ l1 ++ "-" ++ l2
-          }
-        }
+      React.null
+    }}
 
-        <div key={Id.toString(m.id)} className="card" style={marginBottom: "1rem"}>
-          <div className="card-body">
-            <h4>
-              {React.string(team1Name)}
-              {" vs "->React.string}
-              {React.string(team2Name)}
-            </h4>
-            <div style={marginBottom: "0.5rem"}>
-              <strong> {React.string("当前结果: ")} </strong>
-              {React.string(currentScore)}
-            </div>
+    {if Array.length(matchList) == 0 {
+      <EmptyState icon=EmptyState.Clipboard title="本轮暂无比赛" description="请先在「对阵」页面生成本轮比赛。" />
+    } else {
+      <div className="score-entry-list">
+        {matchList->Array.mapWithIndex((m, _) => {
+          let matchCard = MatchCard.fromMatch(m, getTeam, getPlayer)
+          let isByeMatch = Match.isBye(m)
+
+          <div key={Id.toString(m.id)} className="score-entry-card">
+            <MatchCard match=matchCard />
             {if isByeMatch {
-              <p> {React.string("轮空比赛，自动判胜。")} </p>
+              <div className="score-entry-bye">
+                {React.string("轮空比赛，自动判胜，无需录入。")}
+              </div>
             } else {
-              let levelOptions = Data_Level.all->Array.map(l =>
-                <option key={Data_Level.toString(l)} value={Data_Level.toString(l)}>
-                  {React.string(Data_Level.toString(l))}
-                </option>
-              )
-
-              <div className="grid-2col">
-                <div>
-                  <label> {React.string("队伍1 最终级数:")} </label>
-                  <select
-                    value={Data_Level.toString(m.result.team1Level)}
-                    onChange={e => {
-                      let val = ReactEvent.Form.target(e)["value"]
-                      handleSetResult(m.id, Data_Level.fromString(val), m.result.team2Level)
-                    }}>
-                    {levelOptions->React.array}
-                  </select>
+              <div className="score-entry-levels">
+                <div className="score-entry-team-level">
+                  <span className="score-entry-team-label">
+                    {React.string("队伍1 · " ++ matchCard.team1Name)}
+                  </span>
+                  <LevelPicker
+                    value={m.result.team1Level}
+                    onChange={newLevel => handleSetResult(m.id, newLevel, m.result.team2Level)}
+                    label="最终级数"
+                  />
                 </div>
-                <div>
-                  <label> {React.string("队伍2 最终级数:")} </label>
-                  <select
-                    value={Data_Level.toString(m.result.team2Level)}
-                    onChange={e => {
-                      let val = ReactEvent.Form.target(e)["value"]
-                      handleSetResult(m.id, m.result.team1Level, Data_Level.fromString(val))
-                    }}>
-                    {levelOptions->React.array}
-                  </select>
+                <div className="score-entry-divider" />
+                <div className="score-entry-team-level">
+                  <span className="score-entry-team-label">
+                    {React.string("队伍2 · " ++ matchCard.team2Name)}
+                  </span>
+                  <LevelPicker
+                    value={m.result.team2Level}
+                    onChange={newLevel => handleSetResult(m.id, m.result.team1Level, newLevel)}
+                    label="最终级数"
+                  />
                 </div>
               </div>
             }}
           </div>
-        </div>
-      })->React.array
+        })->React.array}
+      </div>
     }}
   </>
 }

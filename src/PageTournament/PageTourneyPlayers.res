@@ -33,30 +33,47 @@ let make = (
   let selectedCount = Id.Set.toArray(teamIds)->Array.length
 
   <>
-    <h2> {React.string("赛事队伍 — " ++ tourney.name)} </h2>
-    <p>
-      {React.string("已选 " ++ Int.toString(selectedCount) ++ " 支队伍")}
-    </p>
-    <div className="grid">
-      {allTeams->Array.map(t => {
-        let isSelected = Id.Set.has(teamIds, t.id)
-        let p1 = getPlayer(t.player1Id)
-        let p2 = getPlayer(t.player2Id)
-        <div
-          key={Id.toString(t.id)}
-          className={"card" ++ (isSelected ? " card-selected" : "")}
-          onClick={_ => toggleTeam(t.id)}
-          style={cursor: "pointer"}>
-          <div className="card-body">
-            <h4 className="card-title"> {React.string(t.name)} </h4>
-            <p className="card-text">
-              {React.string(p1.firstName ++ " " ++ p1.lastName ++ " / " ++ p2.firstName ++ " " ++ p2.lastName)}
-            </p>
-          </div>
-        </div>
-      })->React.array}
+    <div className="players-header">
+      <h2> {React.string("赛事队伍 — " ++ tourney.name)} </h2>
+      <span className="players-count-badge">
+        <Icons.Users />
+        {React.string(" 已选 " ++ Int.toString(selectedCount) ++ " 队")}
+      </span>
     </div>
-    <div style={marginTop: "1rem"}>
+
+    {if Array.length(allTeams) == 0 {
+      <EmptyState icon=EmptyState.Users title="暂无队伍" description="请先在队伍管理中添加参考队伍。" />
+    } else {
+      <div className="players-grid">
+        {allTeams->Array.map(t => {
+          let isSelected = Id.Set.has(teamIds, t.id)
+          let p1 = getPlayer(t.player1Id)
+          let p2 = getPlayer(t.player2Id)
+          <div
+            key={Id.toString(t.id)}
+            className={"player-select-card" ++ (isSelected ? " player-select-card--active" : "")}
+            onClick={_ => toggleTeam(t.id)}
+            role="checkbox"
+            ariaChecked={isSelected ? #\"true" : #\"false"}>
+            {if isSelected {
+              <span className="player-select-check">
+                <Icons.Check />
+              </span>
+            } else {
+              React.null
+            }}
+            <div className="player-select-card-body">
+              <strong className="player-select-card-name"> {React.string(t.name)} </strong>
+              <span className="player-select-card-players">
+                {React.string(p1.firstName ++ " " ++ p1.lastName ++ " / " ++ p2.firstName ++ " " ++ p2.lastName)}
+              </span>
+            </div>
+          </div>
+        })->React.array}
+      </div>
+    }}
+
+    <div className="players-actions">
       <button
         className="button button-primary"
         onClick={_ => goToPage(Pages.Page.Tourney(tourney.id))}

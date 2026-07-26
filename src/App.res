@@ -15,7 +15,7 @@ let make = () => {
         {switch url {
         | Index =>
           <Window.Body windowDispatch>
-            <Pages.Splash />
+            <HomePage windowDispatch />
           </Window.Body>
         | TournamentList => <PageTournamentList windowDispatch />
         | Tournament(id) =>

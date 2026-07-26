@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 export default defineConfig(({ mode }) => {
   let plugins = [
     react({ include: ["**/*.res.mjs"] }),
-    favicons("graphics/logo.svg"),
+    favicons("graphics/AotearoaGuandanLogo.png"),
   ];
   // https://github.com/jihchi/vite-plugin-rescript/issues/231
   if (!(mode === "test" && process.env.CI)) {
@@ -50,7 +50,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       __LAST_COMMIT_DATE__: JSON.stringify(
-        execSync("git log -1 --format=%cs").toString().trim(),
+        execSync("git log -1 --format=%cd --date=short").toString().trim(),
       ),
       __IS_TEST__: JSON.stringify(mode === "test"),
     },

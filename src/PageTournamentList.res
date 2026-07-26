@@ -106,29 +106,35 @@ let make = (~windowDispatch=_ => ()) => {
         isOpen=newTourneyDialog.state
         onDismiss=newTourneyDialog.setFalse
         ariaLabel="创建新赛事"
-        className="">
-        <button className="button-micro" onClick={_ => newTourneyDialog.setFalse()}>
-          {React.string("关闭")}
-        </button>
+        className="dialog-create-tourney">
+        <div className="dialog-header">
+          <h2 className="dialog-title"> {React.string("创建新赛事")} </h2>
+          <button className="button-ghost dialog-close" onClick={_ => newTourneyDialog.setFalse()} ariaLabel="关闭">
+            <Icons.X />
+          </button>
+        </div>
         <form onSubmit=makeTournament>
-          <fieldset>
-            <legend> {React.string("创建新赛事")} </legend>
-            <p>
-              <label htmlFor="tourney-name"> {React.string("名称:")} </label>
-              <input
-                id="tourney-name"
-                name="tourney-name"
-                placeholder="赛事名称"
-                required=true
-                type_="text"
-                value=newTourneyName
-                onChange=updateNewName
-              />
-            </p>
-            <p>
-              <input className="button-primary" type_="submit" value="创建" />
-            </p>
-          </fieldset>
+          <div className="form-group">
+            <label htmlFor="tourney-name"> {React.string("赛事名称")} </label>
+            <input
+              id="tourney-name"
+              name="tourney-name"
+              placeholder="输入赛事名称..."
+              required=true
+              type_="text"
+              value=newTourneyName
+              onChange=updateNewName
+              autoFocus=true
+            />
+          </div>
+          <div className="dialog-actions">
+            <button className="button" type_="button" onClick={_ => newTourneyDialog.setFalse()}>
+              {React.string("取消")}
+            </button>
+            <button className="button button-primary" type_="submit" disabled={newTourneyName == ""}>
+              {React.string("创建赛事")}
+            </button>
+          </div>
         </form>
       </Externals.Dialog>
     </div>

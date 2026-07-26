@@ -46,7 +46,7 @@ module About = {
   let make = () =>
     <article className="win__about">
       <div style={{flex: "0 0 48%", textAlign: "center"}}>
-        <img src=Utils.WebpackAssets.logo height="196" width="196" alt="" />
+        <img src=Utils.WebpackAssets.aotearoaLogo height="196" width="196" alt="" />
       </div>
       <div style={{flex: "0 0 48%"}}>
         <h1 className="title" style={{textAlign: "left"}}> {React.string("Aotearoa掼蛋俱乐部排位系统")} </h1>
@@ -58,48 +58,14 @@ module About = {
     </article>
 }
 
-module TitleBar = {
-  let toolbarClasses = "win__titlebar-button button-ghost button-ghost-large"
-  @react.component
-  let make = (~isMobileSidebarOpen, ~title, ~dispatch) =>
-    <header className="app__header">
-      <button
-        className={`mobile-only ${toolbarClasses}`}
-        onClick={_ => dispatch(SetSidebar(!isMobileSidebarOpen))}>
-        <Icons.Menu />
-        <Externals.VisuallyHidden> {React.string("切换侧边栏")} </Externals.VisuallyHidden>
-      </button>
-      <div
-        className="body-20"
-        style={{
-          left: "0",
-          marginLeft: "auto",
-          marginRight: "auto",
-          position: "absolute",
-          right: "0",
-          textAlign: "center",
-          width: "50%",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-        }}>
-        {title->formatTitle->React.string}
-      </div>
-      <button className=toolbarClasses onClick={_ => dispatch(SetDialog(true))}>
-        <Icons.Help />
-        <Externals.VisuallyHidden> {React.string("关于 AotearoaGuandan")} </Externals.VisuallyHidden>
-      </button>
-    </header>
-}
-
 @react.component
 let make = (~children, ~className) => {
   let (state, dispatch) = React.useReducer(windowReducer, initialWinState)
-  let {isMobileSidebarOpen, isDialogOpen, title} = state
+  let {isMobileSidebarOpen, isDialogOpen, title: _} = state
   <div
     className={`${className} ${isMobileSidebarOpen
         ? "mobile-sidebar-open"
         : "mobile-sidebar-closed"}`}>
-    <TitleBar isMobileSidebarOpen title dispatch />
     {children(dispatch)}
     <Externals.Dialog
       isOpen=isDialogOpen
@@ -120,6 +86,10 @@ module DefaultSidebar = {
   @react.component
   let make = (~dispatch) =>
     <nav>
+      <div className="sidebar-logo">
+        <img src=Utils.WebpackAssets.aotearoaLogo alt="Aotearoa 掼蛋" width="36" height="36" />
+        <span className="sidebar-logo-text"> {React.string("Aotearoa 掼蛋")} </span>
+      </div>
       <ul style={{margin: "0"}}>
         <li>
           <Link to_=Index onDragStart=noDraggy onClick={_ => dispatch(SetSidebar(false))}>
@@ -153,6 +123,19 @@ module DefaultSidebar = {
             </span>
           </Link>
         </li>
+        <li>
+          <a className="sidebar-link" href="#" onDragStart=noDraggy
+            onClick={e => {
+              ReactEvent.Mouse.preventDefault(e)
+              dispatch(SetSidebar(false))
+              dispatch(SetDialog(true))
+            }}>
+            <Icons.Help />
+            <span className="sidebar__hide-on-close">
+              {React.string(HtmlEntities.nbsp ++ "关于")}
+            </span>
+          </a>
+        </li>
       </ul>
     </nav>
 }
@@ -163,6 +146,12 @@ module Body = {
   @react.component
   let make = (~children, ~windowDispatch, ~footerFunc=?, ~sidebarFunc=sidebarCallback) =>
     <div className={`winBody ${footerFunc != None ? "winBody-hasFooter" : ""}`}>
+      <button
+        className="mobile-menu-btn"
+        onClick={_ => windowDispatch(SetSidebar(true))}>
+        <Icons.Menu />
+        <Externals.VisuallyHidden> {React.string("打开菜单")} </Externals.VisuallyHidden>
+      </button>
       <div className="win__sidebar"> {sidebarFunc(windowDispatch)} </div>
       <div className="win__content"> children </div>
       {switch footerFunc {
