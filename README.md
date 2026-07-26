@@ -84,9 +84,14 @@ pnpm run build       # Vite 生产构建 → dist/
 
 ## 界面
 
-| 首页 | 配对 | 积分榜 |
+| 首页 |  积分榜 |配对 |
 |:---:|:---:|:---:|
-| ![首页](./screenshots/title.png) | ![配对](./screenshots/score.png) | ![积分榜](./screenshots/settings.png) |
+| ![首页](./screenshots/title.png) | ![积分榜](./screenshots/score.png) | ![配对](./screenshots/pair.png)| 
+
+
+|选手 |设置 |
+|:---:|:---:|
+| ![选手](./screenshots/players.png) | ![设置](./screenshots/settings.png) |
 
 ---
 
