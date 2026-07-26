@@ -11,7 +11,6 @@ open Data.Tournament
 
 /* These can't be definined inline or the comparisons don't work. */
 let dateSort = Hooks.GetDate(x => x.date)
-let nameSort = Hooks.GetString(x => x.name)
 
 @react.component
 let make = (~windowDispatch=_ => ()) => {
@@ -47,12 +46,17 @@ let make = (~windowDispatch=_ => ()) => {
       dispatch(Del(id))
     }
   }
+
+  let formatLabel = (format: Format.t) => Format.label(format)
+
   <Window.Body windowDispatch>
     <div className="content-area">
+      <h2 className="page-title"> {React.string("掼蛋赛事")} </h2>
+
       <div className="toolbar">
         <button onClick={_ => newTourneyDialog.setTrue()}>
           <Icons.Plus />
-          {React.string(" 添加赛事")}
+          {React.string(" 创建赛事")}
         </button>
         <button className="button-ghost" onClick={_ => helpDialog.setTrue()}>
           <Icons.Help />
@@ -62,51 +66,42 @@ let make = (~windowDispatch=_ => ()) => {
         </button>
       </div>
       <HelpDialogs.SwissTournament state=helpDialog ariaLabel="赛事信息" />
+
       {if Array.length(sorted.table) === 0 {
-        <p> {React.string("尚未添加任何赛事。")} </p>
+        <EmptyState
+          icon=EmptyState.Trophy
+          title="暂无赛事"
+          description="点击「创建赛事」添加您的第一场比赛。"
+        />
       } else {
-        <table>
-          <caption> {React.string("赛事列表")} </caption>
-          <thead>
-            <tr>
-              <th>
-                <Hooks.SortButton data=sorted dispatch=sortDispatch sortColumn=nameSort>
-                  {React.string("名称")}
-                </Hooks.SortButton>
-              </th>
-              <th>
-                <Hooks.SortButton data=sorted dispatch=sortDispatch sortColumn=dateSort>
-                  {React.string("日期")}
-                </Hooks.SortButton>
-              </th>
-              <th>
-                <Externals.VisuallyHidden> {React.string("操作")} </Externals.VisuallyHidden>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="content">
-            {Array.map(sorted.table, ({id, date, name, _}) =>
-              <tr key={id->Data.Id.toString}>
-                <td>
-                  <Link to_=Tournament(id)> {React.string(name)} </Link>
-                </td>
-                <td>
+        <div className="tournament-list">
+          {Array.map(sorted.table, ({id, date, name, format, _}) =>
+            <div key={id->Data.Id.toString} className="tournament-list-card">
+              <div className="tournament-list-card-name">
+                <Link to_=Tournament(id)> {React.string(name)} </Link>
+              </div>
+              <div className="tournament-list-card-meta">
+                <span className="tournament-list-card-format">
+                  {React.string(formatLabel(format))}
+                </span>
+                <span className="tournament-list-card-date">
                   <Utils.DateFormat date />
-                </td>
-                <td>
-                  <button
-                    ariaLabel={`删除 "${name}"`}
-                    className="danger button-ghost"
-                    title={"删除 " ++ name}
-                    onClick={_ => deleteTournament(id, name)}>
-                    <Icons.Trash />
-                  </button>
-                </td>
-              </tr>
-            )->React.array}
-          </tbody>
-        </table>
+                </span>
+              </div>
+              <div className="tournament-list-card-actions">
+                <button
+                  ariaLabel={`删除 "${name}"`}
+                  className="danger button-ghost"
+                  title={"删除 " ++ name}
+                  onClick={_ => deleteTournament(id, name)}>
+                  <Icons.Trash />
+                </button>
+              </div>
+            </div>
+          )->React.array}
+        </div>
       }}
+
       <Externals.Dialog
         isOpen=newTourneyDialog.state
         onDismiss=newTourneyDialog.setFalse

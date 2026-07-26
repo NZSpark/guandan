@@ -59,16 +59,6 @@ let make = (~data: LoadTournament.t) => {
     [scoreData],
   )
 
-  let _getTeamDisplay = (teamId: Id.t): string =>
-    switch getTeam(teamId) {
-    | Some(t) => {
-        let p1 = getPlayer(t.player1Id)
-        let p2 = getPlayer(t.player2Id)
-        t.name ++ " (" ++ p1.firstName ++ "/" ++ p2.firstName ++ ")"
-      }
-    | None => "未知队伍"
-    }
-
   let getTieBreakLabel = (tb: Scoring.TieBreak.t) =>
     Scoring.TieBreak.toPrettyString(tb)
 
@@ -80,8 +70,19 @@ let make = (~data: LoadTournament.t) => {
   let showOpponentScore = isSwiss && Array.length(standings) > 1
   let showWins = isSwiss && Array.length(standings) > 1
 
+  /* Compute round completion status */
+  let roundStatus = React.useMemo1(() => {
+    let lastKey = Rounds.getLastKey(roundList)
+    Array.fromInitializer(~length=lastKey + 1, i =>
+      Rounds.isRoundComplete(roundList, data.activeTeams, i)
+    )
+  }, [roundList])
+
   <>
     <h2> {React.string("积分榜")} </h2>
+
+    <Dashboard data standings roundStatus />
+
     {if Array.length(standings) == 0 {
       <EmptyState icon=EmptyState.Trophy title="暂无比赛数据" description="完成比赛录入后，积分榜将在此展示。" />
     } else {
