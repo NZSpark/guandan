@@ -158,7 +158,7 @@ module Inner = {
         }}
 
         /* ---- Actions ---- */
-        {if isNewRoundReady && isCurrentTabRound {
+        {if isNewRoundReady && (isCurrentTabRound || Rounds.size(roundList) == 0) {
           <div className="tourney-actions">
             {!isItOver
               ? <button className="button button-primary" onClick={_ => handleNewRound()}>
