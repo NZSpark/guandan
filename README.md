@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ai3d.co.nz/guandan/">在线应用</a> ·
+  <a href="https://ai3d.azurewebsites.net/guandan/">在线应用</a> ·
   <a href="./docs/usermanual.md">用户手册</a> ·
   <a href="./docs/operation.md">运维手册</a> ·
   <a href="./docs/faq.md">常见问题</a>
@@ -51,7 +51,7 @@ Aotearoa 掼蛋俱乐部致力于在新西兰推广和普及掼蛋这项中国�
 
 ### 在线使用
 
-访问 **[ai3d.co.nz/guandan](https://ai3d.co.nz/guandan/)** 即可使用，无需注册或安装。
+访问 **[ai3d.azurewebsites.net/guandan](https://ai3d.azurewebsites.net/guandan/)** 即可使用，无需注册或安装。
 
 ### 本地开发
 

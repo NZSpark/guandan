@@ -425,7 +425,7 @@ pnpm test
 - **源码**：[github.com/NZSpark/guandan](https://github.com/NZSpark/guandan)
 - **Issues**：[GitHub Issues](https://github.com/NZSpark/guandan/issues)
 - **邮箱**：spark.zheng@icloud.com
-- **在线应用**：[ai3d.co.nz/guandan](https://ai3d.co.nz/guandan/)
+- **在线应用**：[ai3d.azurewebsites.net/guandan](https://ai3d.azurewebsites.net/guandan/)
 
 ---
 

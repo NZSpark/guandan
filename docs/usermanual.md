@@ -5,7 +5,7 @@
 Aotearoa掼蛋俱乐部排位系统（下称"本系统"）是专为掼蛋比赛设计的 Web 管理工具。系统在浏览器中运行，无需安装，支持**瑞士移位制**、**小组单循环赛**、**淘汰赛**三种赛制，可自动完成选手配对、计分排名、数据导出等全部比赛管理流程。
 
 - **适用场景**：俱乐部周赛、月赛、分组预选赛、年度总决赛
-- **在线地址**：[ai3d.co.nz/guandan](https://ai3d.co.nz/guandan/)
+- **在线地址**：[ai3d.azurewebsites.net/guandan](https://ai3d.azurewebsites.net/guandan/)
 
 ### 1.1 操作流程总览
 
@@ -330,7 +330,7 @@ A: 使用浏览器打印功能（Ctrl+P / Cmd+P）即可打印或导出 PDF。
 
 ## 12. 联系与反馈
 
-- **在线应用**：[ai3d.co.nz/guandan](https://ai3d.co.nz/guandan/)
+- **在线应用**：[ai3d.azurewebsites.net/guandan](https://ai3d.azurewebsites.net/guandan/)
 - **源码仓库**：[github.com/NZSpark/guandan](https://github.com/NZSpark/guandan)
 - **问题反馈**：[GitHub Issues](https://github.com/NZSpark/guandan/issues)
 - **邮箱**：spark.zheng@icloud.com

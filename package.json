@@ -4,11 +4,11 @@
   "author": {
     "name": "Spark Zheng",
     "email": "spark.zheng@icloud.com",
-    "url": "https://ai3d.co.nz/"
+    "url": "https://ai3d.azurewebsites.net/"
   },
   "license": "MPL-2.0",
   "private": true,
-  "homepage": "https://ai3d.co.nz/guandan",
+  "homepage": "https://ai3d.azurewebsites.net/guandan",
   "repository": {
     "type": "git",
     "url": "https://github.com/NZSpark/guandan.git"

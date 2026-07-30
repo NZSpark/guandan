@@ -1,8 +1,8 @@
 ## 在我的电脑上使用这个程序的最简单方法是什么？
 
-访问此链接：[ai3d.co.nz/guandan]。
+访问此链接：[ai3d.azurewebsites.net/guandan]。
 
-[ai3d.co.nz/guandan]: https://ai3d.co.nz/guandan/
+[ai3d.azurewebsites.net/guandan]: https://ai3d.azurewebsites.net/guandan/
 
 ## 我只能通过浏览器使用这个程序吗？
 
