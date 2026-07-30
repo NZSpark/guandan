@@ -186,10 +186,23 @@ let fromTournament = (~roundList, ~scoreAdjustments as _) => {
     ->Array.reduce(Id.Map.make(), (acc, match: Data_Match.t) =>
       switch match.result.winner {
       | Some(_) | None =>
-        let team1Score = Data_Match.Result.fieldScoreForTeam(match.result, true)
-        let team2Score = Data_Match.Result.fieldScoreForTeam(match.result, false)
-        let team1Result = Data_Match.Result.resultForTeam(match.result, true)
-        let team2Result = Data_Match.Result.resultForTeam(match.result, false)
+        let isBye = Data_Match.isBye(match)
+        let (team1Score, team2Score, team1Result, team2Result) = if isBye {
+          if Id.isTeamBye(match.team1Id) {
+            /* team1 = 轮空位, team2 = 真实队伍 → 真实队伍轮空获胜 */
+            (FieldScore.lose, FieldScore.bye, "L", "W")
+          } else {
+            /* team1 = 真实队伍, team2 = 轮空位 → 真实队伍轮空获胜 */
+            (FieldScore.bye, FieldScore.lose, "W", "L")
+          }
+        } else {
+          (
+            Data_Match.Result.fieldScoreForTeam(match.result, true),
+            Data_Match.Result.fieldScoreForTeam(match.result, false),
+            Data_Match.Result.resultForTeam(match.result, true),
+            Data_Match.Result.resultForTeam(match.result, false),
+          )
+        }
         let net1 = Data_Level.netSmallScore(match.result.team1Level, match.result.team2Level)
         let net2 = Data_Level.netSmallScore(match.result.team2Level, match.result.team1Level)
         let cum1 = Data_Level.cumulativeSmallScore(match.result.team1Level)

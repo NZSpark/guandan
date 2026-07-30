@@ -86,6 +86,19 @@ let setMatch = (rounds, key, match_) =>
 
 let rounds2Matches = roundList => Array.concatMany([], roundList)
 
+let isMatchScored = (match: Data_Match.t) =>
+  if Data_Match.isBye(match) {
+    true /* 轮空 — 自动判胜，无需录入即视为已录入 */
+  } else {
+    switch match.result.winner {
+    | Some(_) => true
+    | None =>
+      /* 平级（draw）也是一种有效的已录入状态：
+         双方级数都等于默认值2 → 未录入；否则 → 已录入（平局）*/
+      Data_Level.toInt(match.result.team1Level) != 2 || Data_Level.toInt(match.result.team2Level) != 2
+    }
+  }
+
 let isRoundComplete = (roundList, teams, roundId) =>
   switch roundList[roundId] {
   | Some(round) =>
@@ -94,8 +107,7 @@ let isRoundComplete = (roundList, teams, roundId) =>
     } else {
       let matched = Round.getMatched(round)
       let unmatched = Id.Map.removeMany(teams, matched)
-      let results = Array.map(round, match => match.result.winner)
-      Id.Map.size(unmatched) == 0 && !Js.Array2.includes(results, None)
+      Id.Map.size(unmatched) == 0 && Array.every(round, isMatchScored)
     }
   | None => true
   }

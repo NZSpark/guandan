@@ -51,9 +51,13 @@ let make = (~data: LoadTournament.t, ~roundId: int) => {
   }
 
   let completedCount = matchList->Array.filter(m =>
-    switch m.result.winner {
-    | Some(_) => true
-    | None => Data_Level.toInt(m.result.team1Level) != 2 || Data_Level.toInt(m.result.team2Level) != 2
+    if Match.isBye(m) {
+      true /* 轮空 — 自动判胜，无需录入即视为已完成 */
+    } else {
+      switch m.result.winner {
+      | Some(_) => true
+      | None => Data_Level.toInt(m.result.team1Level) != 2 || Data_Level.toInt(m.result.team2Level) != 2
+      }
     }
   )->Array.length
 

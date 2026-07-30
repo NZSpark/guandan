@@ -47,6 +47,81 @@ module Inner = {
       setActiveTab(_ => Round(newRoundId))
     }
 
+    /* 晋级下一阶段：根据积分榜自动选择晋级队伍并创建新赛事 */
+    let handleAdvanceToNextStage = () => {
+      let teamCount = Id.Map.size(data.activeTeams)
+      switch StageAdvance.getNextStageParams(format, teamCount) {
+      | None => ()
+      | Some(params) =>
+        let advanceCount = params.advanceCount
+        let advancingTeamIds = switch format {
+        | Tournament.Format.Swiss =>
+          /* 海选赛 → 按积分榜取前N名 */
+          let scoreData = Scoring.fromTournament(~roundList, ~scoreAdjustments=Id.Map.make())
+          StageAdvance.getSwissAdvancingTeams(scoreData, advanceCount)
+        | Tournament.Format.GroupStage({groupCount}) =>
+          /* 小组赛 → 每组前2名，交叉对阵排列 */
+          switch tourney.groupAssignments {
+          | Some(ga) => StageAdvance.getGroupAdvancingTeams(roundList, ga, groupCount, ~perGroup=2)
+          | None =>
+            /* 无分组信息 → 按积分榜取前N名 */
+            let scoreData = Scoring.fromTournament(~roundList, ~scoreAdjustments=Id.Map.make())
+            StageAdvance.getSwissAdvancingTeams(scoreData, advanceCount)
+          }
+        | Tournament.Format.Knockout(_) => []
+        }
+        if Array.length(advancingTeamIds) > 0 {
+          let newId = Id.random()
+          let newTourneyName = tourney.name ++ " — " ++ params.name
+          let newTeamIds = advancingTeamIds->Id.Set.fromArray
+          let newTourney = Tournament.make(
+            ~id=newId,
+            ~name=newTourneyName,
+            ~parentTourneyId=tourney.id,
+            ~teamIds=newTeamIds,
+          )
+          /* 从 stageParam 构建具体的 Format */
+          let newFormat = switch params.kind {
+          | StageAdvance.SwissToGroup => Tournament.Format.GroupStage({groupCount: params.stageParam})
+          | StageAdvance.GroupToKnockout => Tournament.Format.Knockout({teamCount: params.stageParam})
+          }
+          /* 瑞士轮 → 小组赛：保存种子分数用于种子排位 */
+          let seedScores = switch format {
+          | Tournament.Format.Swiss =>
+            let scoreData = Scoring.fromTournament(~roundList, ~scoreAdjustments=Id.Map.make())
+            Some(Id.Map.map(scoreData, s => s.totalFieldScore))
+          | Tournament.Format.GroupStage(_) =>
+            /* 小组赛 → 淘汰赛：按晋级顺序分配种子分（排名高的分高） */
+            let n = Array.length(advancingTeamIds)
+            let scorePairs = advancingTeamIds->Array.mapWithIndex((teamId, idx) =>
+              (teamId, Float.fromInt(n - idx))
+            )
+            Some(scorePairs->Id.Map.fromArray)
+          | Tournament.Format.Knockout(_) => None
+          }
+          let newTourneyWithFormat = {
+            ...newTourney,
+            format: newFormat,
+            timeLimitMinutes: Some(params.timeLimitMinutes),
+            seedScores,
+          }
+          /* 持久化新赛事并跳转 */
+          Db.setTourney(newId, newTourneyWithFormat)->Promise.then(_ => {
+            Webapi.Dom.Window.setLocation(Webapi.Dom.window, "/tourneys/" ++ Id.toString(newId))
+            Promise.resolve()
+          })->ignore
+        } else {
+          Webapi.Dom.Window.alert(Webapi.Dom.window, "没有队伍可以晋级。请检查比赛结果录入。")
+        }
+      }
+    }
+
+    /* 是否有下一阶段 */
+    let hasNextStage = switch StageAdvance.getNextStageParams(format, Id.Map.size(data.activeTeams)) {
+    | Some(_) => true
+    | None => false
+    }
+
     let isKnockout = switch format {
     | Tournament.Format.Knockout(_) => true
     | Tournament.Format.Swiss | Tournament.Format.GroupStage(_) => false
@@ -64,7 +139,6 @@ module Inner = {
 
     let isStatus = switch activeTab { | Status => true | Setup | Players | Round(_) | Scores(_) | Bracket => false }
     let isSetupOrPlayers = switch activeTab { | Setup | Players => true | Status | Round(_) | Scores(_) | Bracket => false }
-    let isCurrentTabRound = switch activeTab { | Round(_) => true | Status | Setup | Players | Scores(_) | Bracket => false }
     let isBracket = switch activeTab { | Bracket => true | Status | Setup | Players | Round(_) | Scores(_) => false }
 
     /* Round tab buttons */
@@ -158,7 +232,7 @@ module Inner = {
         }}
 
         /* ---- Actions ---- */
-        {if isNewRoundReady && (isCurrentTabRound || Rounds.size(roundList) == 0) {
+        {if isNewRoundReady {
           <div className="tourney-actions">
             {!isItOver
               ? <button className="button button-primary" onClick={_ => handleNewRound()}>
@@ -166,16 +240,25 @@ module Inner = {
                 </button>
               : React.null}
             {if isItOver {
-              <div className="tourney-done-badge">
-                <Icons.CheckCircle />
-                {React.string(" 赛事已完成！查看积分榜查看最终排名。")}
-              </div>
+              <>
+                <div className="tourney-done-badge">
+                  <Icons.CheckCircle />
+                  {React.string(" 赛事已完成！查看积分榜查看最终排名。")}
+                </div>
+                {if hasNextStage {
+                  <button className="button button-primary"
+                    onClick={_ => handleAdvanceToNextStage()}>
+                    <Icons.Repeat />
+                    {React.string(" 晋级下一阶段")}
+                  </button>
+                } else {
+                  React.null
+                }}
+              </>
             } else {
               React.null
             }}
           </div>
-        } else if isNewRoundReady {
-          React.null
         } else {
           React.null
         }}

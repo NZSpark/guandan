@@ -17,11 +17,27 @@ type roundData = {
 
 let useRoundData = (
   roundId,
-  {tourney: {roundList, _}, activeTeams, _}: LoadTournament.t,
+  {tourney: {roundList, seedScores, _}, activeTeams, _}: LoadTournament.t,
 ) => {
   let scoreData = React.useMemo2(
-    () => Scoring.fromTournament(~roundList, ~scoreAdjustments=Id.Map.make()),
-    (roundList, ()),
+    () => {
+      let data = Scoring.fromTournament(~roundList, ~scoreAdjustments=Id.Map.make())
+      /* 合并种子分数（从上一阶段继承的排名分）到积分数据中 */
+      switch seedScores {
+      | Some(seeds) => Id.Map.merge(data, seeds, (_id, existingScore, seedScore) => {
+          switch (existingScore, seedScore) {
+          | (Some(es), _) => Some(es)  /* 已有积分优先 */
+          | (None, Some(ss)) =>
+            /* 用种子分数创建一个虚拟的积分记录 */
+            let s = Scoring.make(_id)
+            Some({...s, totalFieldScore: ss})
+          | (None, None) => None
+          }
+        })
+      | None => data
+      }
+    },
+    (roundList, seedScores),
   )
   let isThisTheLastRound = roundId == Rounds.getLastKey(roundList)
   let unmatched = switch (Rounds.get(roundList, roundId), isThisTheLastRound) {

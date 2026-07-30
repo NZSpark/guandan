@@ -169,6 +169,9 @@ let testTournament: Tournament.t = {
   swissRounds: None,
   timeLimitMinutes: Some(70),
   groupRandomDraw: false,
+  parentTourneyId: None,
+  groupAssignments: None,
+  seedScores: None,
 }
 
 /* ── Config ── */

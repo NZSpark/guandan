@@ -19,3 +19,4 @@ module Pairing = Data_Pairing
 module Scoring = Data_Scoring
 module GroupStage = Data_GroupStage
 module Knockout = Data_Knockout
+module StageAdvance = Data_StageAdvance

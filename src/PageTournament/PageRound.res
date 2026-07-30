@@ -56,7 +56,10 @@ let make = (
 
   /* 小组赛配对：生成全部轮次 */
   let handleGroupStageAutoPair = (groupCount: int) => {
-    let (_groups, allRoundMatches) = GroupStage.generateSchedule(activeTeams, scoreData, groupCount, ~randomDraw=tourney.groupRandomDraw)
+    let (groups, allRoundMatches) = GroupStage.generateSchedule(activeTeams, scoreData, groupCount, ~randomDraw=tourney.groupRandomDraw)
+
+    /* 构建并存储分组映射 */
+    let groupAssignments = StageAdvance.groupAssignmentsFromGroups(groups, activeTeams)
 
     let timeLimit = tourney.timeLimitMinutes
     let newRoundListRef = ref(roundList)
@@ -73,7 +76,7 @@ let make = (
       }
     })
 
-    setTourney({...tourney, roundList: newRoundListRef.contents})
+    setTourney({...tourney, roundList: newRoundListRef.contents, groupAssignments: Some(groupAssignments)})
   }
 
   /* 淘汰赛配对：生成对阵表 */

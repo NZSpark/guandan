@@ -60,20 +60,32 @@ type t = {
   timeLimitMinutes: option<int>,
   /** 小组赛使用随机抽签（按积分分档后档内随机）而非蛇形分组 */
   groupRandomDraw: bool,
+  /** 多阶段赛事：上一阶段赛事ID（瑞士→小组→淘汰） */
+  parentTourneyId: option<Data_Id.t>,
+  /** 小组赛分组信息：teamId → groupIndex (0-based)。小组赛配对时自动填充 */
+  groupAssignments: option<Data_Id.Map.t<int>>,
+  /** 种子分数（瑞士轮排名分）：从上一阶段传入，用于小组赛/淘汰赛种子排位。teamId → 分数 */
+  seedScores: option<Data_Id.Map.t<float>>,
 }
 
-let make = (~id, ~name) => {
+let make = (~id, ~name, ~parentTourneyId=?, ~teamIds=?) => {
   id,
   name,
   format: Format.default,
   byeQueue: [],
   date: Js.Date.make(),
-  teamIds: Data_Id.Set.make(),
+  teamIds: switch teamIds {
+  | Some(ids) => ids
+  | None => Data_Id.Set.make()
+  },
   roundList: Data_Rounds.empty,
   tieBreaks: Data_Scoring.defaultTieBreaks,
   swissRounds: None,
   timeLimitMinutes: None,
   groupRandomDraw: false,
+  parentTourneyId,
+  groupAssignments: None,
+  seedScores: None,
 }
 
 /**
@@ -126,6 +138,32 @@ let decode = json => {
     | Some(v) => Js.Json.decodeBoolean(v)->Option.getOr(false)
     | None => false
     },
+    parentTourneyId: d
+    ->Js.Dict.get("parentTourneyId")
+    ->Option.flatMap(x => Js.Json.decodeString(x))
+    ->Option.map(Data_Id.fromString),
+    groupAssignments: d
+    ->Js.Dict.get("groupAssignments")
+    ->Option.flatMap(x => Js.Json.decodeObject(x))
+    ->Option.map(obj => {
+      obj
+      ->Js.Dict.entries
+      ->Array.map(((teamId, groupIdx)) =>
+        (Data_Id.fromString(teamId), Js.Json.decodeNumber(groupIdx)->Option.getOr(0.0)->Float.toInt)
+      )
+      ->Data_Id.Map.fromArray
+    }),
+    seedScores: d
+    ->Js.Dict.get("seedScores")
+    ->Option.flatMap(x => Js.Json.decodeObject(x))
+    ->Option.map(obj => {
+      obj
+      ->Js.Dict.entries
+      ->Array.map(((teamId, score)) =>
+        (Data_Id.fromString(teamId), Js.Json.decodeNumber(score)->Option.getOr(0.0))
+      )
+      ->Data_Id.Map.fromArray
+    }),
   }
 }
 
@@ -152,4 +190,38 @@ let encode = data =>
       }
     ),
     ("groupRandomDraw", data.groupRandomDraw->Js.Json.boolean),
+    ("parentTourneyId",
+      switch data.parentTourneyId {
+      | Some(id) => id->Data_Id.encode
+      | None => Js.Json.null
+      }
+    ),
+    (
+      "groupAssignments",
+      switch data.groupAssignments {
+      | Some(ga) =>
+        ga
+        ->Data_Id.Map.toArray
+        ->Array.map(((teamId, groupIdx)) =>
+          (Data_Id.toString(teamId), groupIdx->Float.fromInt->Js.Json.number)
+        )
+        ->Js.Dict.fromArray
+        ->Js.Json.object_
+      | None => Js.Json.null
+      },
+    ),
+    (
+      "seedScores",
+      switch data.seedScores {
+      | Some(ss) =>
+        ss
+        ->Data_Id.Map.toArray
+        ->Array.map(((teamId, score)) =>
+          (Data_Id.toString(teamId), score->Js.Json.number)
+        )
+        ->Js.Dict.fromArray
+        ->Js.Json.object_
+      | None => Js.Json.null
+      },
+    ),
   ])->Js.Json.object_

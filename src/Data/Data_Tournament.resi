@@ -41,9 +41,15 @@ type t = {
   timeLimitMinutes: option<int>,
   /** 小组赛使用随机抽签（按积分分档后档内随机）而非蛇形分组 */
   groupRandomDraw: bool,
+  /** 多阶段赛事：上一阶段赛事ID（瑞士→小组→淘汰） */
+  parentTourneyId: option<Data_Id.t>,
+  /** 小组赛分组信息：teamId → groupIndex (0-based) */
+  groupAssignments: option<Data_Id.Map.t<int>>,
+  /** 种子分数：从上一阶段传入，用于种子排位。teamId → 瑞士排名分 */
+  seedScores: option<Data_Id.Map.t<float>>,
 }
 
-let make: (~id: Data_Id.t, ~name: string) => t
+let make: (~id: Data_Id.t, ~name: string, ~parentTourneyId: Data_Id.t=?, ~teamIds: Data_Id.Set.t=?) => t
 
 let encode: t => Js.Json.t
 
