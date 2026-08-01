@@ -16,12 +16,16 @@ type t =
   | Options
   | NotFound
 
+/** 部署子路径前缀。线上部署于 /guandan/ 下时无需修改；本地开发或部署于根路径时设为 ""。 */
+let basePath = "/guandan"
+
 let id = Data.Id.fromString
 
-let fromPath = x =>
-  /* The first item is always an empty string */
+let rec fromPath = x =>
+  /* 去除 basePath 前缀后匹配路由 */
   switch x {
   | list{} => Index
+  | list{"guandan", ...rest} => fromPath(rest)
   | list{"players"} => Players
   | list{"options"} => Options
   | list{"tourneys"} => TournamentList
@@ -30,13 +34,13 @@ let fromPath = x =>
   }
 
 let toString = x =>
-  switch x {
+  basePath ++ (switch x {
   | Index | NotFound => "/"
   | Players => "/players"
   | Options => "/options"
   | TournamentList => "/tourneys"
   | Tournament(id) => "/tourneys/" ++ str(id)
-  }
+  })
 
 let useUrl = () => {
   let {path, _} = RescriptReactRouter.useUrl()
