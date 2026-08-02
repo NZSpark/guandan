@@ -20,10 +20,7 @@ let make = (~windowDispatch) => {
   let recent5 = sortedArr->Js.Array2.slice(~start=0, ~end_=min(5, Js.Array2.length(sortedArr)))
   let hasRecent = Js.Array2.length(recent5) > 0
 
-  let push = (url: string) => RescriptReactRouter.push(url)
-  let tourneyListUrl = "/tourneys"
-  let playersUrl = "/players"
-  let optionsUrl = "/options"
+  let pushUrl = (route: Router.t) => RescriptReactRouter.push(Router.toString(route))
 
   <div className="homepage">
     <section className="hero">
@@ -39,10 +36,10 @@ let make = (~windowDispatch) => {
     </section>
 
     <section className="quick-actions">
-      <a className="quick-action-card" href=tourneyListUrl
+      <a className="quick-action-card" href={Router.toString(Router.TournamentList)}
         onClick={e => {
           ReactEvent.Mouse.preventDefault(e)
-          push(tourneyListUrl)
+          pushUrl(Router.TournamentList)
         }}>
         <div className="quick-action-icon quick-action-icon--tournament">
           <Icons.Award />
@@ -50,10 +47,10 @@ let make = (~windowDispatch) => {
         <span className="quick-action-label"> {React.string("赛事管理")} </span>
         <span className="quick-action-desc"> {React.string("创建和管理比赛")} </span>
       </a>
-      <a className="quick-action-card" href=playersUrl
+      <a className="quick-action-card" href={Router.toString(Router.Players)}
         onClick={e => {
           ReactEvent.Mouse.preventDefault(e)
-          push(playersUrl)
+          pushUrl(Router.Players)
         }}>
         <div className="quick-action-icon quick-action-icon--players">
           <Icons.Users />
@@ -61,10 +58,10 @@ let make = (~windowDispatch) => {
         <span className="quick-action-label"> {React.string("选手/队伍")} </span>
         <span className="quick-action-desc"> {React.string("管理选手和队伍信息")} </span>
       </a>
-      <a className="quick-action-card" href=optionsUrl
+      <a className="quick-action-card" href={Router.toString(Router.Options)}
         onClick={e => {
           ReactEvent.Mouse.preventDefault(e)
-          push(optionsUrl)
+          pushUrl(Router.Options)
         }}>
         <div className="quick-action-icon quick-action-icon--settings">
           <Icons.Settings />
@@ -78,10 +75,10 @@ let make = (~windowDispatch) => {
       <section className="homepage-section">
         <div className="homepage-section-header">
           <h2> {React.string("最近赛事")} </h2>
-          <a className="homepage-section-link" href=tourneyListUrl
+          <a className="homepage-section-link" href={Router.toString(Router.TournamentList)}
             onClick={e => {
               ReactEvent.Mouse.preventDefault(e)
-              push(tourneyListUrl)
+              pushUrl(Router.TournamentList)
             }}>
             {React.string("查看全部 →")}
           </a>
@@ -89,12 +86,12 @@ let make = (~windowDispatch) => {
         <div className="recent-list">
           {recent5->Js.Array2.map(t => {
             let formatLabel = Data.Tournament.Format.label(t.format)
-            let detailUrl = "/tourneys/" ++ Data.Id.toString(t.id)
+            let detailUrl = Router.toString(Router.Tournament(t.id))
             <a key={t.id->Data.Id.toString} className="recent-card"
               href=detailUrl
               onClick={e => {
                 ReactEvent.Mouse.preventDefault(e)
-                push(detailUrl)
+                pushUrl(Router.Tournament(t.id))
               }}>
               <div className="recent-card-icon"> <Icons.Award /> </div>
               <div className="recent-card-body">

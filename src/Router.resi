@@ -16,6 +16,8 @@ type t =
 
 let useUrl: unit => t
 
+let toString: t => string
+
 module Link: {
   @react.component
   let make: (

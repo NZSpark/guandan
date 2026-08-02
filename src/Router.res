@@ -16,25 +16,39 @@ type t =
   | Options
   | NotFound
 
-/** 部署子路径前缀。线上部署于 /guandan/ 下时无需修改；本地开发或部署于根路径时设为 ""。 */
-let basePath = "/guandan"
-
 let id = Data.Id.fromString
 
-let rec fromPath = x =>
-  /* 去除 basePath 前缀后匹配路由 */
-  switch x {
+/** 将 hash 字符串（不含#）解析为路径 segment 列表。
+    例如 "/tourneys/abc" → list{"tourneys", "abc"} */
+let parseHash = hash => {
+  let rec arrayToList = (arr, i, acc) =>
+    if i < 0 {
+      acc
+    } else {
+      let seg = Js.Array2.unsafe_get(arr, i)
+      if seg == "" {
+        arrayToList(arr, i - 1, acc)
+      } else {
+        arrayToList(arr, i - 1, list{seg, ...acc})
+      }
+    }
+  let parts = hash->Js.String2.split("/")
+  arrayToList(parts, Js.Array2.length(parts) - 1, list{})
+}
+
+let fromPath = hash => {
+  switch parseHash(hash) {
   | list{} => Index
-  | list{"guandan", ...rest} => fromPath(rest)
   | list{"players"} => Players
   | list{"options"} => Options
   | list{"tourneys"} => TournamentList
   | list{"tourneys", x} => Tournament(id(x))
   | _ => NotFound
   }
+}
 
 let toString = x =>
-  basePath ++ (switch x {
+  "#" ++ (switch x {
   | Index | NotFound => "/"
   | Players => "/players"
   | Options => "/options"
@@ -43,8 +57,8 @@ let toString = x =>
   })
 
 let useUrl = () => {
-  let {path, _} = RescriptReactRouter.useUrl()
-  fromPath(path)
+  let {hash, _} = RescriptReactRouter.useUrl()
+  fromPath(hash)
 }
 
 module Link = {
